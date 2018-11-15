@@ -3,6 +3,11 @@ eff.lua
 
 ONE-SHOT Algebraic Effects for Lua!
 
+# installation
+```shell-session
+$ luarocks --local install eff
+```
+
 # usage
 `eff` provides four objects, `Eff`, `UncaughtEff`, `perform`, `handler`
 
