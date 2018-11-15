@@ -9,7 +9,7 @@ $ luarocks --local install eff
 ```
 
 # usage
-`eff` provides four objects, `Eff`, `UncaughtEff`, `perform`, `handler`
+`eff` provides four objects, `Eff`, `UncaughtEff`, `perform` and `handler`.
 
 ## effect definition and invocation
 `Eff` requires the effect name and returns the effect instance.
@@ -23,7 +23,7 @@ perform(Write("Hello!")) -- invocation
 ## effect handler
 `handler(eff, value-handler, effect-handler)`
 
-`handler` requires handling effect `eff`, `value handler`, `effect handler` and returns the closure that requires thunk and run the thunk handling effect.
+`handler` requires the handling effect `eff`, `value handler` and `effect handler`, and returns the closure that requires thunk and crush the thunk, with handling `eff`.
 
 ```lua
 local printh = handler(Write,
@@ -44,7 +44,7 @@ printh ended    nil
 ]]
 ```
 
-The continuation `effect handler` received is  *ONE-SHOT*, in other words, the continuatoin *cannot* run twice.
+The continuation `effect handler` received is *ONE-SHOT*, in other words, the continuatoin *cannot* run twice.
 
 ```lua
 handler(Write,
