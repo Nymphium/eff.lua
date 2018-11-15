@@ -12,6 +12,6 @@ dependencies = {}
 build = {
    type = "builtin",
    modules = {
-      eff = "src/eff.lua"
+      eff = "eff.lua/src/eff.lua"
    }
 }
