@@ -22,7 +22,6 @@ function(v) print("revh ended", v) end,
 function(arg, k)
   print(arg:reverse())
   k()
-  k()
 end)
 
 printh(function()
@@ -33,6 +32,9 @@ printh(function()
   end)
 end)
 
+--[[
+-- failed to run continuation twice
+
 handler(Write,
 function(v) print("printh ended", v) end,
 function(arg, k)
@@ -42,3 +44,5 @@ function(arg, k)
 end)(function()
   perform(Write("Foo"))
 end)
+
+--]]
