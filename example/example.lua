@@ -10,7 +10,7 @@ end
 
 local printh = handler(Write,
 function(v) print("printh ended", v) end,
-function(arg, k)
+function(k, arg)
   print(arg)
   k()
 end)
@@ -19,16 +19,24 @@ printh(test)
 
 local revh = handler(Write,
 function(v) print("revh ended", v) end,
-function(arg, k)
+function(k, arg)
   print(arg:reverse())
   k()
 end)
 
-printh(function()
-  perform(Write("hello"))
+local Amb = Eff("Amb")
+
+local amblh = handler(Amb,
+function(v) return v end,
+function(k, l, _)
+  k(l)
+end)
+
+amblh(function()
+  local lr = perform(Amb("left", "right"))
 
   revh(function()
-    perform(Write("World"))
+    perform(Write(lr))
   end)
 end)
 
@@ -37,10 +45,10 @@ end)
 
 handler(Write,
 function(v) print("printh ended", v) end,
-function(arg, k)
+function(k, arg)
   print(arg)
   k()
-  k()
+  k() -- call continuation twice
 end)(function()
   perform(Write("Foo"))
 end)

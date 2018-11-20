@@ -28,7 +28,7 @@ perform(Write("Hello!")) -- invocation
 ```lua
 local printh = handler(Write,
   function(v) print("printh ended", v) end,
-  function(arg, k)
+  function(k, arg)
     print(arg)
     k()
   end)
@@ -49,7 +49,7 @@ The continuation `effect handler` received is *ONE-SHOT*, in other words, the co
 ```lua
 handler(Write,
 function(v) print("printh ended", v) end,
-function(arg, k)
+function(k, arg)
   print(arg)
   k()
   k() -- call continuation twice
