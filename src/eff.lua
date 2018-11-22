@@ -1,18 +1,31 @@
-local Eff = function(eff)
-  local _Eff = {cls = "Eff", eff = eff}
-
-  return setmetatable({--[[arg = nil]]}, {
-    __index = _Eff,
-
+local Eff
+do
+  local _M = {
     __tostring = function(self)
-      return self.eff
-    end,
+      return ("%s(%s)"):format(self.eff, table.concat(self.arg, ", "))
+    end
+  }
 
-    __call = function(self, ...)
-      self.arg = {...}
-      return self
-    end,
-  })
+  Eff = function(eff)
+    local _Eff = {cls = "Eff", eff = eff}
+
+    return setmetatable({--[[arg = nil]]}, {
+      __index = _Eff,
+
+      __tostring = function(self)
+        return self.eff
+      end,
+
+      __call = function(self, ...)
+        local ret = {}
+
+        ret.cls = self.cls
+        ret.eff = self.eff
+        ret.arg = {...}
+        return setmetatable(ret, _M)
+      end,
+    })
+  end
 end
 
 
@@ -37,6 +50,42 @@ do
   })
 end
 
+local ValueV
+do
+  local _vv = {cls = "Value"}
+
+  ValueV = setmetatable(_vv, {
+    __tostring = function() return _vv.cls end,
+    __call = function(self, v)
+      return setmetatable({v = v}, {
+        __index = self,
+      })
+      end
+    })
+end
+
+local EffV
+do
+  local _vv = {cls = "EffValue"}
+
+  EffV = setmetatable(_vv, {
+    __tostring = function() return _vv.cls end,
+    __call = function(self, v)
+      return setmetatable({v = v}, {
+        __index = self,
+      })
+      end
+    })
+end
+
+local is_eff_obj = function(obj)
+  return type(obj) == "table" and (obj.cls == "Eff" or obj.cls == "UncaughtEff")
+end
+
+local is_vv = function(obj)
+  return type(obj) == "table" and (obj.cls == "Value" or obj.cls == "EffValue")
+end
+
 local handler = function(eff, vh, effh)
   eff = tostring(eff)
 
@@ -50,13 +99,21 @@ local handler = function(eff, vh, effh)
     }
 
     mut.handle = function(r)
-      if type(r) ~= "table" or (r.cls ~= "Eff" and r.cls ~= "UncaughtEff") then
-        return vh(r)
+      if not is_eff_obj(r) then
+        return ValueV(vh(r))
       end
 
       if r.cls == "Eff" then
         if eff == r.eff then
-          return effh(mut.continue, table.unpack(r.arg))
+          return effh(function(arg)
+            local ret = mut.continue(arg)
+
+            if not is_vv(ret) then
+              return EffV(ret)
+            else
+              return ret
+            end
+          end, table.unpack(r.arg))
         else
           return UncaughtEff(r, mut.continue)
         end
@@ -64,21 +121,22 @@ local handler = function(eff, vh, effh)
       elseif r.cls == "UncaughtEff" then
         if eff == r.eff.eff then
           return effh(r.eff.continue, table.unpack(r.eff.arg))
-          -- return effh(r.eff.arg, r.eff.continue)
         else
-          -- rethrow
           return r
         end
-
-      else
-        return r
       end
     end
 
     mut.continue = function(arg)
       local st, r = coroutine.resume(gr, arg)
       if not st then
-        return error("continuation cannot be performed twice")
+        if type(r) == "string" and r:match("attempt to yield from outside a coroutine") then
+          return error("continuation cannot be performed twice")
+        else
+          return error(r)
+        end
+      elseif is_vv(r) then
+        return r.v
       else
         return mut.handle(r)
       end
@@ -91,10 +149,12 @@ local handler = function(eff, vh, effh)
       return error(r)
     end
 
-    if type(r) ~= "table" or (r.cls ~= "Eff" and r.cls ~= "UncaughtEff") then
-      return r
-    else
+    if is_eff_obj(r) then
       return mut.handle(r)
+    elseif is_vv(r) then
+      return r.v
+    else
+      return r
     end
   end
 end
