@@ -2,11 +2,13 @@ local Eff
 do
   local _M = {
     __tostring = function(self)
-      return ("%s(%s)"):format(self.eff, table.concat(self.arg, ", "))
+      return tostring(self.eff)
     end
   }
 
   Eff = function(eff)
+    -- uniqnize
+    eff = eff .. (tostring{}):match("0x[0-f]+")
     local _Eff = {cls = "Eff", eff = eff}
 
     return setmetatable({--[[arg = nil]]}, {
@@ -28,14 +30,9 @@ do
   end
 end
 
-
 local show_error = function(eff)
-  return function(err)
-    if err:match("attempt to yield from outside a coroutine") then
-      return ("uncaught effect `%s`"):format(eff)
-    else
-      return err
-    end
+  return function()
+    return ("uncaught effect `%s\n%s`"):format(eff, debug.traceback())
   end
 end
 
@@ -80,6 +77,10 @@ end
 
 local is_eff_obj = function(obj)
   return type(obj) == "table" and (obj.cls == "Eff" or obj.cls == "UncaughtEff")
+end
+
+local is_uncaught_eff_obj = function(obj)
+  return type(obj) == "table" and obj.cls == "UncaughtEff"
 end
 
 local is_vv = function(obj)
@@ -130,8 +131,11 @@ local handler = function(eff, vh, effh)
     mut.continue = function(arg)
       local st, r = coroutine.resume(gr, arg)
       if not st then
-        if type(r) == "string" and r:match("attempt to yield from outside a coroutine") then
-          return error("continuation cannot be performed twice")
+        if type(r) == "string"
+          and r:match("attempt to yield from outside a coroutine")
+           or r:match("cannot resume dead coroutine")
+          then
+            return error("continuation cannot be performed twice")
         else
           return error(r)
         end
@@ -142,14 +146,11 @@ local handler = function(eff, vh, effh)
       end
     end
 
-    local rco = coroutine.create(mut.continue)
-    local st, r = coroutine.resume(rco)
+    local r = mut.continue()
 
-    if not st then
+    if is_uncaught_eff_obj(r) then
       return error(r)
-    end
-
-    if is_eff_obj(r) then
+    elseif is_eff_obj(r) then
       return mut.handle(r)
     elseif is_vv(r) then
       return r.v
