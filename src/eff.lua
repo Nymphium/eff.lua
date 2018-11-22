@@ -121,7 +121,7 @@ local handler = function(eff, vh, effh)
 
       elseif r.cls == "UncaughtEff" then
         if eff == r.eff.eff then
-          return effh(r.eff.continue, table.unpack(r.eff.arg))
+          return effh(r.continue, table.unpack(r.eff.arg))
         else
           return r
         end
