@@ -1,3 +1,8 @@
+local create = coroutine.create
+local resume = coroutine.resume
+local yield = coroutine.yield
+local unpack = table.unpack
+
 local Eff
 do
   local _M = {
@@ -40,7 +45,7 @@ local UncaughtEff
 do
   UncaughtEff = setmetatable({}, {
    __call = function(_, eff, continue)
-      return coroutine.yield(setmetatable({eff = eff, continue = continue, cls = "UncaughtEff"}, {
+      return yield(setmetatable({eff = eff, continue = continue, cls = "UncaughtEff"}, {
         __tostring = show_error(eff)
       }))
     end
@@ -79,10 +84,6 @@ local is_eff_obj = function(obj)
   return type(obj) == "table" and (obj.cls == "Eff" or obj.cls == "UncaughtEff")
 end
 
-local is_uncaught_eff_obj = function(obj)
-  return type(obj) == "table" and obj.cls == "UncaughtEff"
-end
-
 local is_vv = function(obj)
   return type(obj) == "table" and (obj.cls == "Value" or obj.cls == "EffValue")
 end
@@ -91,7 +92,7 @@ local handler = function(eff, vh, effh)
   eff = tostring(eff)
 
   return function(th)
-    local gr = coroutine.create(th);
+    local gr = create(th);
 
     -- for mutual recursion
     local mut = {
@@ -114,11 +115,10 @@ local handler = function(eff, vh, effh)
             else
               return ret
             end
-          end, table.unpack(r.arg))
+          end, unpack(r.arg))
         else
           return UncaughtEff(r, mut.continue)
         end
-
       elseif r.cls == "UncaughtEff" then
         if eff == r.eff.eff then
           return effh(function(arg)
@@ -129,7 +129,7 @@ local handler = function(eff, vh, effh)
             else
               return mut.continue(ret)
             end
-          end, table.unpack(r.eff.arg))
+          end, unpack(r.eff.arg))
         else
           return r
         end
@@ -137,7 +137,7 @@ local handler = function(eff, vh, effh)
     end
 
     mut.continue = function(arg)
-      local st, r = coroutine.resume(gr, arg)
+      local st, r = resume(gr, arg)
       if not st then
         if type(r) == "string"
           and r:match("attempt to yield from outside a coroutine")
@@ -156,9 +156,7 @@ local handler = function(eff, vh, effh)
 
     local r = mut.continue()
 
-    if is_eff_obj(r) then
-      return mut.handle(r)
-    elseif is_vv(r) then
+    if is_vv(r) then
       return r.v
     else
       return r
@@ -169,7 +167,7 @@ end
 return {
   Eff = Eff,
   UncaughtEff = UncaughtEff,
-  perform = coroutine.yield,
+  perform = yield,
   handler = handler,
 }
 
