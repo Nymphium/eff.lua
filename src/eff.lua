@@ -121,7 +121,15 @@ local handler = function(eff, vh, effh)
 
       elseif r.cls == "UncaughtEff" then
         if eff == r.eff.eff then
-          return effh(r.continue, table.unpack(r.eff.arg))
+          return effh(function(arg)
+            local ret = r.continue(arg)
+
+            if not is_vv(ret) then
+              return mut.continue(EffV(ret))
+            else
+              return mut.continue(ret)
+            end
+          end, table.unpack(r.eff.arg))
         else
           return r
         end
@@ -148,9 +156,7 @@ local handler = function(eff, vh, effh)
 
     local r = mut.continue()
 
-    if is_uncaught_eff_obj(r) then
-      return error(r)
-    elseif is_eff_obj(r) then
+    if is_eff_obj(r) then
       return mut.handle(r)
     elseif is_vv(r) then
       return r.v
