@@ -1,5 +1,5 @@
 package = "eff"
-version = "2.0-5"
+version = "2.0-6"
 source = {
    url = "git://github.com/Nymphium/eff.lua",
    tag = "v2.0"
