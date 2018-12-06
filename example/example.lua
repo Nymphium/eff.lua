@@ -24,16 +24,16 @@ function(k, arg)
   k()
 end)
 
-local Amb = Eff("Amb")
+local Choice = Eff("Choice")
 
-local amblh = handler(Amb,
+local choiceh = handler(Choice,
 function(v) return v end,
 function(k, l, _)
   k(l)
 end)
 
-amblh(function()
-  local lr = perform(Amb("left", "right"))
+choiceh(function()
+  local lr = perform(Choice("left", "right"))
 
   revh(function()
     perform(Write(lr))

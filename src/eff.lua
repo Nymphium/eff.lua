@@ -94,13 +94,10 @@ local handler = function(eff, vh, effh)
   return function(th)
     local gr = create(th);
 
-    -- for mutual recursion
-    local mut = {
-      handle = nil,
-      continue = nil
-    }
+    local handle
+    local continue
 
-    mut.handle = function(r)
+    handle = function(r)
       if not is_eff_obj(r) then
         return ValueV(vh(r))
       end
@@ -108,7 +105,7 @@ local handler = function(eff, vh, effh)
       if r.cls == "Eff" then
         if eff == r.eff then
           return effh(function(arg)
-            local ret = mut.continue(arg)
+            local ret = continue(arg)
 
             if not is_vv(ret) then
               return EffV(ret)
@@ -117,7 +114,7 @@ local handler = function(eff, vh, effh)
             end
           end, unpack(r.arg))
         else
-          return UncaughtEff(r, mut.continue)
+          return UncaughtEff(r, continue)
         end
       elseif r.cls == "UncaughtEff" then
         if eff == r.eff.eff then
@@ -125,9 +122,9 @@ local handler = function(eff, vh, effh)
             local ret = r.continue(arg)
 
             if not is_vv(ret) then
-              return mut.continue(EffV(ret))
+              return continue(EffV(ret))
             else
-              return mut.continue(ret)
+              return continue(ret)
             end
           end, unpack(r.eff.arg))
         else
@@ -136,7 +133,7 @@ local handler = function(eff, vh, effh)
       end
     end
 
-    mut.continue = function(arg)
+    continue = function(arg)
       local st, r = resume(gr, arg)
       if not st then
         if type(r) == "string"
@@ -150,11 +147,11 @@ local handler = function(eff, vh, effh)
       elseif is_vv(r) then
         return r.v
       else
-        return mut.handle(r)
+        return handle(r)
       end
     end
 
-    local r = mut.continue()
+    local r = continue()
 
     if is_vv(r) then
       return r.v
