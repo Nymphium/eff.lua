@@ -32,11 +32,19 @@ function(k, l, _)
   k(l)
 end)
 
-choiceh(function()
-  local lr = perform(Choice("left", "right"))
+local Any = Eff("Any")
 
-  revh(function()
-    perform(Write(lr))
+local anyh = handler(Any,
+  function(v) print(v) return v end,
+  function(k) return k() end)
+
+
+choiceh(function()
+  anyh(function()
+    return revh(function()
+      local lr = perform(Choice("left", "right"))
+      perform(Write(lr))
+    end)
   end)
 end)
 
