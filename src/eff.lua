@@ -128,7 +128,7 @@ local handler = function(eff, vh, effh)
             end
           end, unpack(r.eff.arg))
         else
-          return r
+          return yield(r)
         end
       end
     end
