@@ -66,40 +66,26 @@ do
     })
 end
 
-local EffV
-do
-  local _vv = {cls = "EffValue"}
-
-  EffV = setmetatable(_vv, {
-    __tostring = function() return _vv.cls end,
-    __call = function(self, v)
-      return setmetatable({v = v}, {
-        __index = self,
-      })
-      end
-    })
-end
-
 local is_eff_obj = function(obj)
   return type(obj) == "table" and (obj.cls == "Eff" or obj.cls == "UncaughtEff")
 end
 
 local is_vv = function(obj)
-  return type(obj) == "table" and (obj.cls == "Value" or obj.cls == "EffValue")
+  return type(obj) == "table" and obj.cls == "Value"
 end
 
 local handler = function(eff, vh, effh)
   eff = tostring(eff)
 
   return function(th)
-    local gr = create(th);
+    local gr = create(th)
 
     local handle
     local continue
 
     handle = function(r)
       if not is_eff_obj(r) then
-        return ValueV(vh(r))
+        return vh(r)
       end
 
       if r.cls == "Eff" then
@@ -108,7 +94,7 @@ local handler = function(eff, vh, effh)
             local ret = continue(arg)
 
             if not is_vv(ret) then
-              return EffV(ret)
+              return ValueV(ret)
             else
               return ret
             end
@@ -122,13 +108,21 @@ local handler = function(eff, vh, effh)
             local ret = r.continue(arg)
 
             if not is_vv(ret) then
-              return continue(EffV(ret))
-            else
               return continue(ret)
+            else
+              return continue(ret.v)
             end
           end, unpack(r.eff.arg))
         else
-          return yield(r)
+          return UncaughtEff(r.eff, function(arg)
+            local ret = r.continue(arg)
+            if not is_vv(ret) then
+              return continue(ret)
+            else
+              return continue(ret.v)
+            end
+          end)
+          -- return yield(r)
         end
       end
     end
@@ -151,13 +145,7 @@ local handler = function(eff, vh, effh)
       end
     end
 
-    local r = continue()
-
-    if is_vv(r) then
-      return r.v
-    else
-      return r
-    end
+    return continue()
   end
 end
 
