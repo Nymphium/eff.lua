@@ -1,5 +1,6 @@
 local create = coroutine.create
 local resume = coroutine.resume
+local _create = coroutine.wrap
 local yield = coroutine.yield
 local unpack = table.unpack
 
@@ -37,7 +38,7 @@ end
 
 local show_error = function(eff)
   return function()
-    return ("uncaught effect `%s\n%s`"):format(eff, debug.traceback())
+    return ("uncaught effect `%s'"):format(eff)
   end
 end
 
@@ -45,33 +46,15 @@ local UncaughtEff
 do
   UncaughtEff = setmetatable({}, {
    __call = function(_, eff, continue)
-      return yield(setmetatable({eff = eff, continue = continue, cls = "UncaughtEff"}, {
-        __tostring = show_error(eff)
-      }))
-    end
-  })
-end
-
-local ValueV
-do
-  local _vv = {cls = "Value"}
-
-  ValueV = setmetatable(_vv, {
-    __tostring = function() return _vv.cls end,
-    __call = function(self, v)
-      return setmetatable({v = v}, {
-        __index = self,
-      })
-      end
-    })
+     return yield(setmetatable({eff = eff, continue = continue, cls = "UncaughtEff"}, {
+       __tostring = show_error(eff)
+     }))
+   end
+ })
 end
 
 local is_eff_obj = function(obj)
   return type(obj) == "table" and (obj.cls == "Eff" or obj.cls == "UncaughtEff")
-end
-
-local is_vv = function(obj)
-  return type(obj) == "table" and obj.cls == "Value"
 end
 
 local handler = function(eff, vh, effh)
@@ -90,39 +73,19 @@ local handler = function(eff, vh, effh)
 
       if r.cls == "Eff" then
         if eff == r.eff then
-          return effh(function(arg)
-            local ret = continue(arg)
-
-            if not is_vv(ret) then
-              return ValueV(ret)
-            else
-              return ret
-            end
-          end, unpack(r.arg))
+          return effh(continue, unpack(r.arg))
         else
           return UncaughtEff(r, continue)
         end
       elseif r.cls == "UncaughtEff" then
         if eff == r.eff.eff then
           return effh(function(arg)
-            local ret = r.continue(arg)
-
-            if not is_vv(ret) then
-              return continue(ret)
-            else
-              return continue(ret.v)
-            end
+            return handle(_create(r.continue)(arg))
           end, unpack(r.eff.arg))
         else
           return UncaughtEff(r.eff, function(arg)
-            local ret = r.continue(arg)
-            if not is_vv(ret) then
-              return continue(ret)
-            else
-              return continue(ret.v)
-            end
+            return handle(_create(r.continue)(arg))
           end)
-          -- return yield(r)
         end
       end
     end
@@ -138,8 +101,6 @@ local handler = function(eff, vh, effh)
         else
           return error(r)
         end
-      elseif is_vv(r) then
-        return r.v
       else
         return handle(r)
       end
