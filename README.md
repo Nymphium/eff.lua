@@ -48,12 +48,13 @@ The continuation `effect handler` received is *ONE-SHOT*, in other words, the co
 
 ```lua
 handler(Write,
-function(v) print("printh ended", v) end,
-function(k, arg)
-  print(arg)
-  k()
-  k() -- call continuation twice
-end)(function()
+  function(v) print("printh ended", v) end,
+  function(k, arg)
+    print(arg)
+    k()
+    k() -- call continuation twice
+  end)
+(function()
   perform(Write("Foo"))
 end)
 
