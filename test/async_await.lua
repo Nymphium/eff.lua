@@ -6,6 +6,15 @@ local inspect = require('inspect')
 
 local imut
 do
+  table.move = table.move
+  or function(src, from, to, on, dst)
+    for  i = from, to do
+      dst[i + on - 1] = src[i]
+    end
+
+    return dst
+  end
+
   local cp = function(t)
     return table.move(t, 1, #t, 1, {})
   end
@@ -36,7 +45,12 @@ end
 local ref
 do
   local newref = function()
-    return setmetatable({content = nil}, {
+    return setmetatable({
+      content = nil,
+      get = function(self)
+        return self.content
+      end
+    }, {
       __call = function(self, v)
         self.content = v
         return self
@@ -86,7 +100,7 @@ local run = function(main)
   local function fork(pr, main)
     return handler(AEff,
       function(v)
-        local pp = ~pr
+        local pp = pr:get()
         local l
 
         if pp.cls == "waiting" then
@@ -113,7 +127,7 @@ local run = function(main)
           return dequeue()
         elseif c.cls == "await" then
           local p = c[1]
-          local pp = ~p
+          local pp = p:get()
 
           if pp.cls == "done" then
             return k(pp[1])

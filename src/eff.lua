@@ -1,8 +1,7 @@
 local create = coroutine.create
 local resume = coroutine.resume
-local _create = coroutine.wrap
 local yield = coroutine.yield
-local unpack = table.unpack
+local unpack = table.unpack or unpack
 
 local Eff
 do
@@ -12,10 +11,13 @@ do
     end
   }
 
-  Eff = function(eff)
+  local v = {}
+  v.cls = ("Eff%s"):format(tostring(v):match('0x[0-f]+'))
+
+  Eff = setmetatable(v, {__call = function(self, eff)
     -- uniqnize
     eff = eff .. (tostring{}):match("0x[0-f]+")
-    local _Eff = {cls = "Eff", eff = eff}
+    local _Eff = setmetatable({eff = eff}, {__index = self})
 
     return setmetatable({--[[arg = nil]]}, {
       __index = _Eff,
@@ -33,7 +35,7 @@ do
         return setmetatable(ret, _M)
       end,
     })
-  end
+  end})
 end
 
 local show_error = function(eff)
@@ -44,9 +46,11 @@ end
 
 local UncaughtEff
 do
-  UncaughtEff = setmetatable({}, {
+  local v = {}
+  local cls = ("UncaughtEff%s"):format(tostring(v):match('0x[0-f]+'))
+  UncaughtEff = setmetatable(v, {
    __call = function(_, eff, continue)
-     return yield(setmetatable({eff = eff, continue = continue, cls = "UncaughtEff"}, {
+     return yield(setmetatable({eff = eff, continue = continue, cls = cls}, {
        __tostring = show_error(eff)
      }))
    end
@@ -54,7 +58,7 @@ do
 end
 
 local is_eff_obj = function(obj)
-  return type(obj) == "table" and (obj.cls == "Eff" or obj.cls == "UncaughtEff")
+  return type(obj) == "table" and (obj.cls == Eff.cls or obj.cls == UncaughtEff.cls)
 end
 
 local handler = function(eff, vh, effh)
@@ -71,27 +75,27 @@ local handler = function(eff, vh, effh)
         return vh(r)
       end
 
-      if r.cls == "Eff" then
+      if r.cls == Eff.cls then
         if eff == r.eff then
-          return effh(continue, unpack(r.arg))
+          return effh(function(arg) return continue(gr, arg) end, unpack(r.arg))
         else
-          return UncaughtEff(r, continue)
+          return UncaughtEff(r, function(arg) return continue(gr, arg) end)
         end
-      elseif r.cls == "UncaughtEff" then
+      elseif r.cls == UncaughtEff.cls then
         if eff == r.eff.eff then
           return effh(function(arg)
-            return handle(_create(r.continue)(arg))
+            return continue(create(r.continue), arg)
           end, unpack(r.eff.arg))
         else
           return UncaughtEff(r.eff, function(arg)
-            return handle(_create(r.continue)(arg))
+            return continue(create(r.continue), arg)
           end)
         end
       end
     end
 
-    continue = function(arg)
-      local st, r = resume(gr, arg)
+    continue = function(co, arg)
+      local st, r = resume(co, arg)
       if not st then
         if type(r) == "string"
           and r:match("attempt to yield from outside a coroutine")
@@ -106,7 +110,7 @@ local handler = function(eff, vh, effh)
       end
     end
 
-    return continue()
+    return continue(gr, nil)
   end
 end
 

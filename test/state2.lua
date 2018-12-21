@@ -5,6 +5,15 @@ local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
 
 local imut
 do
+  table.move = table.move
+  or function(src, from, to, on, dst)
+    for  i = from, to do
+      dst[i + on - 1] = src[i]
+    end
+
+    return dst
+  end
+
   local cp = function(t)
     return table.move(t, 1, #t, 1, {})
   end
