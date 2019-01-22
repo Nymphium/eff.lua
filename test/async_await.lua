@@ -1,4 +1,4 @@
--- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/fringe.ml
+-- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/async_await.ml
 
 local eff = require('eff')
 local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
