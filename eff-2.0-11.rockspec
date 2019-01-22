@@ -17,7 +17,7 @@ build = {
    },
    install = {
       lua = {
-         ["eff"] = [[src/eff.lua]]
+         ["eff"] = [[eff.lua/src/eff.lua]]
       }
    }
 }
