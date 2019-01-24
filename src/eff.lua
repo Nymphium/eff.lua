@@ -46,11 +46,12 @@ end
 
 local UncaughtEff
 do
-  local v = {}
   local cls = ("UncaughtEff%s"):format(tostring(v):match('0x[0-f]+'))
+  local v = {cls = cls}
   UncaughtEff = setmetatable(v, {
-   __call = function(_, eff, continue)
-     return yield(setmetatable({eff = eff, continue = continue, cls = cls}, {
+   __call = function(self, eff, continue)
+     return yield(setmetatable({eff = eff, continue = continue}, {
+       __index = self,
        __tostring = show_error(eff)
      }))
    end
