@@ -5,18 +5,17 @@ local unpack = table.unpack or unpack
 
 local Eff
 do
-  local _M = {
-    __tostring = function(self)
+  local __tostring = function(self)
       return tostring(self.eff)
     end
-  }
+  
 
   local v = {}
-  v.cls = ("Eff%s"):format(tostring(v):match('0x[0-f]+'))
+  v.cls = ("Eff: %s"):format(tostring(v):match('0x[0-f]+'))
 
   Eff = setmetatable(v, {__call = function(self, eff)
     -- uniqnize
-    eff = eff .. (tostring{}):match("0x[0-f]+")
+    eff = ("%s: %s"):format(eff, (tostring{}):match("0x[0-f]+"))
     local _Eff = setmetatable({eff = eff}, {__index = self})
 
     return setmetatable({--[[arg = nil]]}, {
@@ -29,10 +28,8 @@ do
       __call = function(self, ...)
         local ret = {}
 
-        ret.cls = self.cls
-        ret.eff = self.eff
         ret.arg = {...}
-        return setmetatable(ret, _M)
+        return setmetatable(ret, { __index = self, __tostring = __tostring })
       end,
     })
   end})
@@ -46,8 +43,8 @@ end
 
 local UncaughtEff
 do
-  local cls = ("UncaughtEff%s"):format(tostring(v):match('0x[0-f]+'))
-  local v = {cls = cls}
+  local v = {}
+  v.cls = ("UncaughtEff: %s"):format(tostring(v):match('0x[0-f]+'))
   UncaughtEff = setmetatable(v, {
    __call = function(self, eff, continue)
      return yield(setmetatable({eff = eff, continue = continue}, {
