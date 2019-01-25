@@ -38,17 +38,17 @@ local anyh = handler(Any,
   function(v) print("anyh ended", v) return v end,
   function(k) return k() end)
 
--- choiceh(function()
-  -- anyh(function()
-    -- return revh(function()
-      -- local lr = perform(Choice("left", "right"))
-      -- perform(Any())
-      -- local lr_ = perform(Choice("one", "two"))
-      -- perform(Write(lr))
-      -- perform(Write(lr_))
-    -- end)
-  -- end)
--- end)
+choiceh(function()
+  anyh(function()
+    return revh(function()
+      local lr = perform(Choice("left", "right"))
+      perform(Any())
+      local lr_ = perform(Choice("one", "two"))
+      perform(Write(lr))
+      printh(function() perform(Write(lr_)) end)
+    end)
+  end)
+end)
 
 --[[
 -- failed to run continuation twice
