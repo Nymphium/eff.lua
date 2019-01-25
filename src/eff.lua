@@ -3,23 +3,6 @@ local resume = coroutine.resume
 local yield = coroutine.yield
 local unpack = table.unpack or unpack
 
-local inspect = require('inspect')
-
-local resume_ = function(co, ...)
-  local rets = {resume(co, ...)}
-  table.remove(rets, 1)
-  return unpack(rest)
-end
-
-local i
-do
-  local ii = 0
-  i = function()
-    ii = ii + 1
-    return ii
-  end
-end
-
 local Eff
 do
   local __tostring = function(self)
@@ -31,7 +14,7 @@ do
 
   Eff = setmetatable(v, {__call = function(self, eff)
     -- uniqnize
-    eff = ("%s: %s"):format(eff, i())
+    eff = ("%s: %s"):format(eff, tostring{}:match('0x[0-f]+'))
     local _Eff = setmetatable({eff = eff}, {__index = self})
 
     return setmetatable({--[[arg = nil]]}, {
