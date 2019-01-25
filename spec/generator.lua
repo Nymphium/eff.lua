@@ -1,6 +1,6 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/generator.ml
 
-local eff = require('eff')
+local eff = require('src/eff')
 local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
 
 --[[
@@ -36,13 +36,18 @@ local table_iter = function(xs, f)
   end
 end
 
-local gen_list = function(c) return generate(table_iter, c) end
-local gl = gen_list {3, 5, 7}
-assert(gl() == 3)
-assert(gl() == 5)
-assert(gl() == 7)
-assert(gl() == nil)
-assert(gl() == nil)
+describe("generator test 1", function()
+  local gen_list = function(c) return generate(table_iter, c) end
+  local gl = gen_list {3, 5, 7}
+
+  it("run", function()
+    assert.are.equal(gl(), 3)
+    assert.are.equal(gl(), 5)
+    assert.are.equal(gl(), 7)
+    assert.are.equal(gl(), nil)
+    assert.are.equal(gl(), nil)
+  end)
+end)
 
 local function nats(v, f)
   return function()
@@ -64,11 +69,14 @@ end
 
 local gen_nats = inf(generate(function(_, f) return nats(0, f)() end, nil))
 
-assert(gen_nats() == 0)
-assert(gen_nats() == 1)
-assert(gen_nats() == 2)
-assert(gen_nats() == 3)
-
+describe("generator test 2", function()
+  it('run', function()
+    assert.are.equal(gen_nats(), 0)
+    assert.are.equal(gen_nats(), 1)
+    assert.are.equal(gen_nats(), 2)
+    assert.are.equal(gen_nats(), 3)
+  end)
+end)
 
 local function filter(g, p)
   return function()
@@ -76,12 +84,6 @@ local function filter(g, p)
     if p(v) then return v
     else return filter(g, p)()
     end
-  end
-end
-
-local function map(g, f)
-  return function()
-    return f(g())
   end
 end
 
@@ -94,10 +96,14 @@ do
   gen_even = filter(nat_stream, function(n) return n % 2 == 0 end)
 end
 
-assert(gen_even() == 0)
-assert(gen_even() == 2)
-assert(gen_even() == 4)
-assert(gen_even() == 6)
+describe("generator test 3", function()
+  it("run", function()
+    assert.are.equal(gen_even(), 0)
+    assert.are.equal(gen_even(), 2)
+    assert.are.equal(gen_even(), 4)
+    assert.are.equal(gen_even(), 6)
+  end)
+end)
 
 local gen_odd
 do
@@ -106,11 +112,14 @@ do
   gen_odd = filter(nat_stream, function(n) return n % 2 == 1 end)
 end
 
-
-assert(gen_odd() == 1)
-assert(gen_odd() == 3)
-assert(gen_odd() == 5)
-assert(gen_odd() == 7)
+describe("generator test 4", function()
+  it("run", function()
+    assert.are.equal(gen_odd(), 1)
+    assert.are.equal(gen_odd(), 3)
+    assert.are.equal(gen_odd(), 5)
+    assert.are.equal(gen_odd(), 7)
+  end)
+end)
 
 local gen_primes
 do
@@ -124,15 +133,18 @@ do
   end
 end
 
-assert(gen_primes() == 2)
-assert(gen_primes() == 3)
-assert(gen_primes() == 5)
-assert(gen_primes() == 7)
-assert(gen_primes() == 11)
-assert(gen_primes() == 13)
-assert(gen_primes() == 17)
-assert(gen_primes() == 19)
-assert(gen_primes() == 23)
-assert(gen_primes() == 29)
-assert(gen_primes() == 31)
-
+describe("generator test 4", function()
+  it("run", function()
+    assert.are.equal(gen_primes(), 2)
+    assert.are.equal(gen_primes(), 3)
+    assert.are.equal(gen_primes(), 5)
+    assert.are.equal(gen_primes(), 7)
+    assert.are.equal(gen_primes(), 11)
+    assert.are.equal(gen_primes(), 13)
+    assert.are.equal(gen_primes(), 17)
+    assert.are.equal(gen_primes(), 19)
+    assert.are.equal(gen_primes(), 23)
+    assert.are.equal(gen_primes(), 29)
+    assert.are.equal(gen_primes(), 31)
+  end)
+end)

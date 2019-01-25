@@ -1,0 +1,22 @@
+language: c
+
+sudo: required
+
+branches:
+  only:
+    - travis_ci
+    - master
+
+env:
+  global:
+    - LUAROCKS=3.0.4
+  matrix:
+    - LUA=lua5.1
+    - LUA=lua5.2
+    - LUA=lua5.3
+
+before_install:
+  - source .travis/setenv_lua.sh
+
+script:
+  make test

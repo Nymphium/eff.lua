@@ -1,6 +1,6 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/fringe.ml
 
-local eff = require('eff')
+local eff = require('src/eff')
 local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
 
 local Yield = Eff("Yield")
@@ -62,14 +62,18 @@ local same_fringe = function(t1, t2)
   return loop()
 end
 
-local t1 = Node(Leaf(1), Node(Leaf(2), Leaf(3)))
-local t2 = Node(Node(Leaf(1), Leaf(2)), Leaf((3)))
-local t3 = Node(Node(Leaf(3), Leaf(1)), Leaf((1)))
-local t7 = Node(Leaf(1), Node(Leaf(2), Leaf(3)))
+describe("fringe test", function()
+  it("run", function()
+    local t1 = Node(Leaf(1), Node(Leaf(2), Leaf(3)))
+    local t2 = Node(Node(Leaf(1), Leaf(2)), Leaf((3)))
+    local t3 = Node(Node(Leaf(3), Leaf(1)), Leaf((1)))
+    local t7 = Node(Leaf(1), Node(Leaf(2), Leaf(3)))
 
-assert(same_fringe(t1, t2))
-assert(same_fringe(t2, t1))
-assert(not same_fringe(t1, t3))
-assert(same_fringe(t1, t7))
-assert(same_fringe(t2, t7))
+    assert.True(same_fringe(t1, t2))
+    assert.True(same_fringe(t2, t1))
+    assert.True(not same_fringe(t1, t3))
+    assert.True(same_fringe(t1, t7))
+    assert.True(same_fringe(t2, t7))
+  end)
+end)
 
