@@ -1,6 +1,8 @@
 eff.lua
 ===
 
+[![Build Status](https://api.travis-ci.org/Nymphium/eff.lua.svg?branch=master)](https://travis-ci.org/Nymphium/eff.lua)
+
 ONE-SHOT Algebraic Effects for Lua!
 
 # installation
