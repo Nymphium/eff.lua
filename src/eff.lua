@@ -40,12 +40,12 @@ local show_error = function(eff)
   end
 end
 
-local UncaughtEff
+local Resend
 do
   local v = {}
-  v.cls = ("UncaughtEff: %s"):format(tostring(v):match('0x[0-f]+'))
+  v.cls = ("Resend: %s"):format(tostring(v):match('0x[0-f]+'))
 
-  UncaughtEff = setmetatable(v, {
+  Resend = setmetatable(v, {
    __call = function(self, eff, continue)
      return yield(setmetatable({ eff = eff.eff, arg = eff.arg, continue = continue }, {
        __index = self,
@@ -56,7 +56,7 @@ do
 end
 
 local is_eff_obj = function(obj)
-  return type(obj) == "table" and (obj.cls == Eff.cls or obj.cls == UncaughtEff.cls)
+  return type(obj) == "table" and (obj.cls == Eff.cls or obj.cls == Resend.cls)
 end
 
 local handler
@@ -88,17 +88,17 @@ handler = function(eff, vh, effh)
             return continue(gr, arg)
           end, unpack(r.arg))
         else
-          return UncaughtEff(r, function(arg)
+          return Resend(r, function(arg)
             return continue(gr, arg)
           end)
         end
-      elseif r.cls == UncaughtEff.cls then
+      elseif r.cls == Resend.cls then
         if is_the_eff(r.eff) then
           return effh(function(arg)
             return rehandle(arg, r.continue)
           end, unpack(r.arg))
         else
-          return UncaughtEff(r, function(arg)
+          return Resend(r, function(arg)
             return rehandle(arg, r.continue)
           end)
         end
