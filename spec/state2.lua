@@ -1,41 +1,44 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/state2.ml
 
 local eff = require('src/eff')
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local Eff, perform, handlers = eff.Eff, eff.perform, eff.handlers
 
 local imut = require('spec/utils/imut')
 
 local State = function()
-  local State = Eff("State")
+  local Get = Eff("Get")
+  local Put = Eff("Put")
+  local History = Eff("History")
+
   local get = function()
-    return perform(State{ cls = "Get" })
+    return perform(Get())
   end
   local put = function(v)
-    return perform(State{ v, cls = "Put" })
+    return perform(Put(v))
   end
   local history = function()
-    return perform(State{ cls = "History" })
+    return perform(History())
   end
 
   local run = function(f, init)
-    local comp = handler(State,
-    function() return function() end end,
-    function(k, c)
-      if c.cls == "Get" then
-        return function(s, h)
-          return k(s)(s, h)
-        end
-      elseif c.cls == "Put" then
-        return function(_, h)
-          local s_ = c[1]
-          return k()(s_, imut.cons(s_, h))
-        end
-      elseif c.cls == "History" then
-        return function(s, h)
-          return k(imut.rev(h))(s, imut.cp(h))
-        end
-      end
-    end)(f)
+    local comp = handlers(
+      function() return function() end end,
+        {Get, function(k)
+          return function(s, h)
+            return k(s)(s, h)
+          end
+        end},
+        {Put, function(k, v)
+          return function(_, h)
+            return k()(v, imut.cons(v, h))
+          end
+        end},
+        {History, function(k)
+          return function(s, h)
+            return k(imut.rev(h))(s, imut.cp(h))
+          end
+        end}
+    )(f)
 
     return comp(init, {})
   end
