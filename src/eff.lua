@@ -65,6 +65,27 @@ local is_eff_obj = function(obj)
   return type(obj) == "table" and (obj.cls == Eff.cls or obj.cls == Resend.cls)
 end
 
+local function get_effh(eff, effeffhs)
+  eff = tostring(eff)
+
+  for i = 1, #effeffhs do
+    if tostring(effeffhs[i][1]) == eff then
+      return effeffhs[i][2]
+    end
+  end
+end
+
+local function handle_error_message(r)
+  if type(r) == "string" and
+  (r:match("attempt to yield from outside a coroutine")
+   or r:match("cannot resume dead coroutine"))
+  then
+    return error("continuation cannot be performed twice")
+  else
+    return error(r)
+  end
+end
+
 local handler
 handler = function(eff, vh, effh)
   local is_the_eff = function(it)
@@ -114,30 +135,13 @@ handler = function(eff, vh, effh)
     continue = function(co, arg)
       local st, r = resume(co, arg)
       if not st then
-        if type(r) == "string" and
-        (r:match("attempt to yield from outside a coroutine")
-         or r:match("cannot resume dead coroutine"))
-        then
-            return error("continuation cannot be performed twice")
-        else
-          return error(r)
-        end
+        return handle_error_message(r)
       else
         return handle(r)
       end
     end
 
     return continue(gr, nil)
-  end
-end
-
-local function get_effh(eff, effeffhs)
-  eff = tostring(eff)
-
-  for i = 1, #effeffhs do
-    if tostring(effeffhs[i][1]) == eff then
-      return effeffhs[i][2]
-    end
   end
 end
 
@@ -190,14 +194,7 @@ handlers = function(vh, ...)
     continue = function(co, arg)
       local st, r = resume(co, arg)
       if not st then
-        if type(r) == "string" and
-        (r:match("attempt to yield from outside a coroutine")
-         or r:match("cannot resume dead coroutine"))
-        then
-            return error("continuation cannot be performed twice")
-        else
-          return error(r)
-        end
+        return handle_error_message(r)
       else
         return handle(r)
       end
