@@ -11,13 +11,13 @@ local State = function()
   local History = Eff("History")
 
   local get = function()
-    return perform(Get)
+    return perform(Get())
   end
   local put = function(v)
-    return perform(Put, v)
+    return perform(Put(v))
   end
   local history = function()
-    return perform(History)
+    return perform(History())
   end
 
   local run = function(f, init)

@@ -1,7 +1,7 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/async_await.ml
 
 local eff = require('src/eff')
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local Eff, perform, handlers = eff.Eff, eff.perform, eff.handlers
 
 local imut = require('spec/utils/imut')
 local ref = require('spec/utils/ref')
@@ -16,15 +16,19 @@ local Done = function(a)
   return { a, cls = "done" }
 end
 
-local AEff = Eff("AEff")
+local Async = Eff("Async")
 local async = function(f)
-  return perform(AEff{ f, cls = "async" })
+  return perform(Async(f))
 end
+
+local Yield = Eff("Yield")
 local yield = function()
-  return perform(AEff{ cls = "yield" })
+  return perform(Yield())
 end
+
+local Await = Eff("Await")
 local await = function(p)
-  return perform(AEff{ p, cls = "await" })
+  return perform(Await(p))
 end
 
 -- queue
@@ -36,14 +40,13 @@ end
 local dequeue = function()
   local f = table.remove(q, 1)
   if f then
-    local m = f()
-    return m
+    return f()
   end
 end
 
 local run = function(main)
   local function fork(pr, main)
-    return handler(AEff,
+    return handlers(
       function(v)
         local pp = pr:get()
         local l
@@ -61,17 +64,17 @@ local run = function(main)
         pr(Done(v))
         return dequeue()
       end,
-      function(k, c)
-        if c.cls == "async" then
-          local f = c[1]
+
+      {Async, function(k, f)
           local pr_ = ref(Waiting{})
           enqueue(function() return k(pr_) end)
           return fork(pr_, f)
-        elseif c.cls == "yield" then
+      end},
+      {Yield, function(k)
           enqueue(function() return k() end)
           return dequeue()
-        elseif c.cls == "await" then
-          local p = c[1]
+      end},
+      {Await, function(k, p)
           local pp = p:get()
 
           if pp.cls == "done" then
@@ -80,8 +83,7 @@ local run = function(main)
             p(Waiting(imut.cons(k, pp[1])))
             return dequeue()
           end
-        end
-      end)(main)
+        end})(main)
   end
 
   return fork(ref(Waiting{}), main)

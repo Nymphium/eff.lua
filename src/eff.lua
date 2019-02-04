@@ -1,7 +1,13 @@
 local create = coroutine.create
 local resume = coroutine.resume
 local yield = coroutine.yield
-local unpack = table.unpack or unpack
+local unpack0 = table.unpack or unpack
+
+local unpack = function(t)
+  if t and #t > 0 then
+    return unpack0(t)
+  end
+end
 
 local Eff
 do
@@ -72,7 +78,7 @@ handler = function(eff, vh, effh)
     local continue
 
     local rehandle = function(arg, k)
-      return handler(eff, function(...) return continue(gr, ...) end, effh)(function()
+      return handler(eff, function(args) return continue(gr, unpack(args)) end, effh)(function()
         return k(arg)
       end)
     end
@@ -129,14 +135,16 @@ local function get_effh(eff, effeffhs)
   eff = tostring(eff)
 
   for i = 1, #effeffhs do
-    if effeffhs[i][1] == eff then
+    if tostring(effeffhs[i][1]) == eff then
       return effeffhs[i][2]
     end
   end
 end
 
 local handlers
-handlers = function(vh, effeffhs)
+handlers = function(vh, ...)
+  local effeffhs = {...}
+
   return function(th)
     local gr = create(th)
 
@@ -144,7 +152,7 @@ handlers = function(vh, effeffhs)
     local continue
 
     local rehandles = function(arg, k)
-      return handlers(function(...) return continue(gr, ...) end, effeffhs)(function()
+      return handlers(function(...) return continue(gr, ...) end, unpack(effeffhs))(function()
         return k(arg)
       end)
     end
@@ -166,7 +174,7 @@ handlers = function(vh, effeffhs)
           end)
         end
       elseif r.cls == Resend.cls then
-        local effh = get_effh(r.eff.eff, effeffhs)
+        local effh = get_effh(r.eff, effeffhs)
         if effh then
           return effh(function(arg)
             return rehandles(arg, r.continue)
