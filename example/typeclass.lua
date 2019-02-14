@@ -1,13 +1,13 @@
 local eff = require('eff')
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
 print([[
 monoid
 =====]])
 
 do
-  local Empty = Eff("Empty")
-  local Concat = Eff("Concat")
+  local Empty = inst()
+  local Concat = inst()
 
   local empty = function()
     return perform(Empty())
@@ -81,7 +81,7 @@ fmap
 ===]])
 
 do
-  local Map = Eff("Map")
+  local Map = inst()
 
   local map = function(f, fa)
     return perform(Map(f, fa))

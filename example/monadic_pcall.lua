@@ -1,7 +1,7 @@
 local eff = require('eff')
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
-local Pcall = Eff("Pcall")
+local Pcall = inst()
 local epcall = function(f, ...)
   return perform(Pcall(f, ...))
 end

@@ -1,10 +1,10 @@
 local eff = require('eff')
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
-local Fetch = Eff("Fetch")
+local Fetch = inst()
 local fetch = function(it) return perform(Fetch(it)) end
 
-local Fallback = Eff("Fallback")
+local Fallback = inst()
 
 local fetchh = handler(Fetch,
   function(v) return v end,

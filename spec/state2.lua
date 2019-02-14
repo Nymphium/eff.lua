@@ -1,14 +1,14 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/state2.ml
 
 local eff = require('src/eff')
-local Eff, perform, handlers = eff.Eff, eff.perform, eff.handlers
+local inst, perform, handlers = eff.inst, eff.perform, eff.handlers
 
 local imut = require('spec/utils/imut')
 
 local State = function()
-  local Get = Eff("Get")
-  local Put = Eff("Put")
-  local History = Eff("History")
+  local Get = inst()
+  local Put = inst()
+  local History = inst()
 
   local get = function()
     return perform(Get())

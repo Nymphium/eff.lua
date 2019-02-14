@@ -1,7 +1,7 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/async_await.ml
 
 local eff = require('src/eff')
-local Eff, perform, handlers = eff.Eff, eff.perform, eff.handlers
+local inst, perform, handlers = eff.inst, eff.perform, eff.handlers
 
 local imut = require('spec/utils/imut')
 local ref = require('spec/utils/ref')
@@ -16,17 +16,17 @@ local Done = function(a)
   return { a, cls = "done" }
 end
 
-local Async = Eff("Async")
+local Async = inst()
 local async = function(f)
   return perform(Async(f))
 end
 
-local Yield = Eff("Yield")
+local Yield = inst()
 local yield = function()
   return perform(Yield())
 end
 
-local Await = Eff("Await")
+local Await = inst()
 local await = function(p)
   return perform(Await(p))
 end

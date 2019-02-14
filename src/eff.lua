@@ -9,7 +9,7 @@ local unpack = function(t)
   end
 end
 
-local Eff
+local inst
 do
   local __tostring = function(self)
     return tostring(self.eff)
@@ -18,9 +18,9 @@ do
   local v = {}
   v.cls = ("Eff: %s"):format(tostring(v):match('0x[0-f]+'))
 
-  Eff = setmetatable(v, {__call = function(self, eff)
+  inst = setmetatable(v, {__call = function(self)
     -- uniqnize
-    eff = ("%s: %s"):format(eff, tostring{}:match('0x[0-f]+'))
+    local eff = ("instance: %s"):format(tostring{}:match('0x[0-f]+'))
     local _Eff = setmetatable({eff = eff}, {__index = self})
 
     return setmetatable({--[[arg = nil]]}, {
@@ -62,7 +62,7 @@ do
 end
 
 local is_eff_obj = function(obj)
-  return type(obj) == "table" and (obj.cls == Eff.cls or obj.cls == Resend.cls)
+  return type(obj) == "table" and (obj.cls == inst.cls or obj.cls == Resend.cls)
 end
 
 local function get_effh(eff, effeffhs)
@@ -109,7 +109,7 @@ handler = function(eff, vh, effh)
         return vh(r)
       end
 
-      if r.cls == Eff.cls then
+      if r.cls == inst.cls then
         if is_the_eff(r.eff) then
           return effh(function(arg)
             return continue(gr, arg)
@@ -166,7 +166,7 @@ handlers = function(vh, ...)
         return vh(r)
       end
 
-      if r.cls == Eff.cls then
+      if r.cls == inst.cls then
         local effh = get_effh(r.eff, effeffhs)
         if effh then
           return effh(function(arg)
@@ -206,7 +206,7 @@ end
 
 
 return {
-  Eff = Eff,
+  inst = inst,
   perform = yield,
   handler = handler,
   handlers = handlers
