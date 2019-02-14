@@ -9,14 +9,14 @@ $ luarocks --local install eff
 ```
 
 # usage
-`eff` provides four objects, `Eff`, `UncaughtEff`, `perform` and `handler`.
+`eff` provides three objects, `inst`, `perform` and `handler`.
 
-## effect definition and invocation
-`Eff` requires the effect name and returns the effect instance.
+## effect instantiation and invocation
+`inst` generates the effect instance.
 `perform` invoke the passed effect.
 
 ```lua
-local Write = Eff("Write") -- definition
+local Write = inst() -- instantiation
 perform(Write("Hello!")) -- invocation
 ```
 
@@ -44,6 +44,7 @@ printh ended    nil
 ]]
 ```
 
+### limitation about continuation
 The continuation `effect handler` received is *ONE-SHOT*, in other words, the continuatoin *cannot* run twice.
 
 ```lua
