@@ -3,7 +3,7 @@ local resume = coroutine.resume
 local yield = coroutine.yield
 local unpack = table.unpack or unpack
 
-local Eff
+local inst
 do
   local __tostring = function(self)
     return tostring(self.eff)
@@ -12,9 +12,9 @@ do
   local v = {}
   v.cls = ("Eff: %s"):format(tostring(v):match('0x[0-f]+'))
 
-  Eff = setmetatable(v, {__call = function(self, eff)
+  inst = setmetatable(v, {__call = function(self)
     -- uniqnize
-    eff = ("%s: %s"):format(eff, tostring{}:match('0x[0-f]+'))
+    local eff = ("instance: %s"):format(tostring{}:match('0x[0-f]+'))
     local _Eff = setmetatable({eff = eff}, {__index = self})
 
     return setmetatable({--[[arg = nil]]}, {
@@ -56,7 +56,7 @@ do
 end
 
 local is_eff_obj = function(obj)
-  return type(obj) == "table" and (obj.cls == Eff.cls or obj.cls == Resend.cls)
+  return type(obj) == "table" and (obj.cls == inst.cls or obj.cls == Resend.cls)
 end
 
 local handler
@@ -82,7 +82,7 @@ handler = function(eff, vh, effh)
         return vh(r)
       end
 
-      if r.cls == Eff.cls then
+      if r.cls == inst.cls then
         if is_the_eff(r.eff) then
           return effh(function(arg)
             return continue(gr, arg)
@@ -112,7 +112,7 @@ handler = function(eff, vh, effh)
         (r:match("attempt to yield from outside a coroutine")
          or r:match("cannot resume dead coroutine"))
         then
-            return error("continuation cannot be performed twice")
+          return error("continuation cannot be performed twice")
         else
           return error(r)
         end
@@ -126,7 +126,7 @@ handler = function(eff, vh, effh)
 end
 
 return {
-  Eff = Eff,
+  inst = inst,
   perform = yield,
   handler = handler,
 }

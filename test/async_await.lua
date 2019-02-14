@@ -1,7 +1,7 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/async_await.ml
 
 local eff = require('eff')
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 local inspect = require('inspect')
 
 local imut
@@ -71,7 +71,7 @@ local Done = function(a)
   return { a, cls = "done" }
 end
 
-local AEff = Eff("AEff")
+local AEff = inst()
 local async = function(f)
   return perform(AEff{ f, cls = "async" })
 end

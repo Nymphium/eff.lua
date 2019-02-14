@@ -1,12 +1,11 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/generator.ml
-
-local eff = require('eff')
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local eff = require('src/eff')
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
 --[[
 iter : ('a table, 'a -> 'b) ->  ()
 --]]
-local Yield = Eff("Yield")
+local Yield = inst()
 
 local generate = function(iter, c)
   local step = { f = nil }

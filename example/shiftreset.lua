@@ -1,12 +1,12 @@
 local eff = require("eff")
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
 local inspect = require("inspect")
 
 local sr
 do
   local new_prompt = function()
-    local Shift0 = Eff("Shift0")
+    local Shift0 = inst()
 
     return {
       take = function(f) return perform(Shift0(f)) end,
@@ -84,7 +84,7 @@ print([[
 
 local promless
 do
-  local Shift0 = Eff("Shift0")
+  local Shift0 = inst()
 
   local shift0 = function(f)
     return perform(Shift0(f))

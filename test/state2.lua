@@ -1,7 +1,7 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/state2.ml
 
 local eff = require('eff')
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
 local imut
 do
@@ -42,7 +42,7 @@ do
 end
 
 local State = function()
-  local SEff = Eff("SEff")
+  local SEff = inst()
   local get = function()
     return perform(SEff{ cls = "Get" })
   end
