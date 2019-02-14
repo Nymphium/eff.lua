@@ -1,7 +1,7 @@
 local eff = require('eff')
-local Eff, perform, handler = eff.Eff, eff.perform, eff.handler
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
-local Write = Eff("Write")
+local Write = inst()
 
 local test = function()
   local x = perform(Write("hello"))
@@ -24,7 +24,7 @@ function(k, arg)
   k()
 end)
 
-local Choice = Eff("Choice")
+local Choice = inst()
 
 local choiceh = handler(Choice,
 function(v) return v end,
@@ -32,7 +32,7 @@ function(k, l, _)
   k(l)
 end)
 
-local Any = Eff("Any")
+local Any = inst()
 
 local anyh = handler(Any,
   function(v) print("anyh ended", v) return v end,

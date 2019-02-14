@@ -5,7 +5,7 @@ algebraic-exception for Lua
 local exn
 do
   local eff = require('eff')
-  local Eff, perform, handlers = eff.Eff, eff.perform, eff.handlers
+  local inst, perform, handlers = eff.inst, eff.perform, eff.handlers
 
   local handlers_ = function(...)
     local effeffhs = {...}
@@ -23,7 +23,7 @@ do
 
   exn = { raise = perform
         , handlers = handlers_
-        , Exception = Eff
+        , Exception = inst
         }
 end
 
