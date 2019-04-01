@@ -46,7 +46,7 @@ end
 
 local run = function(main)
   local function fork(pr, main)
-    return handlers(
+    return handlers{
       function(v)
         local pp = pr:get()
         local l
@@ -64,26 +64,26 @@ local run = function(main)
         pr(Done(v))
         return dequeue()
       end,
+      [Async] = (function(k, f)
+        local pr_ = ref(Waiting{})
+        enqueue(function() return k(pr_) end)
+        return fork(pr_, f)
+      end),
+      [Yield] = (function(k)
+        enqueue(function() return k() end)
+        return dequeue()
+      end),
+      [Await] = (function(k, p)
+        local pp = p:get()
 
-      {Async, function(k, f)
-          local pr_ = ref(Waiting{})
-          enqueue(function() return k(pr_) end)
-          return fork(pr_, f)
-      end},
-      {Yield, function(k)
-          enqueue(function() return k() end)
+        if pp.cls == "done" then
+          return k(pp[1])
+        elseif pp.cls == "waiting" then
+          p(Waiting(imut.cons(k, pp[1])))
           return dequeue()
-      end},
-      {Await, function(k, p)
-          local pp = p:get()
-
-          if pp.cls == "done" then
-            return k(pp[1])
-          elseif pp.cls == "waiting" then
-            p(Waiting(imut.cons(k, pp[1])))
-            return dequeue()
-          end
-        end})(main)
+        end
+      end)
+    }(main)
   end
 
   return fork(ref(Waiting{}), main)

@@ -11,10 +11,6 @@ end
 
 local inst
 do
-  local __tostring = function(self)
-    return tostring(self.eff)
-  end
-
   local v = {}
   v.cls = ("Eff: %s"):format(tostring(v):match('0x[0-f]+'))
 
@@ -26,15 +22,11 @@ do
     return setmetatable({--[[arg = nil]]}, {
       __index = _Eff,
 
-      __tostring = function(self)
-        return self.eff
-      end,
-
       __call = function(self, ...)
         local ret = {}
 
         ret.arg = {...}
-        return setmetatable(ret, { __index = self, __tostring = __tostring })
+        return setmetatable(ret, { __index = self})
       end,
     })
   end})
@@ -65,16 +57,6 @@ local is_eff_obj = function(obj)
   return type(obj) == "table" and (obj.cls == inst.cls or obj.cls == Resend.cls)
 end
 
-local function get_effh(eff, effeffhs)
-  eff = tostring(eff)
-
-  for i = 1, #effeffhs do
-    if tostring(effeffhs[i][1]) == eff then
-      return effeffhs[i][2]
-    end
-  end
-end
-
 local function handle_error_message(r)
   if type(r) == "string" and
   (r:match("attempt to yield from outside a coroutine")
@@ -89,7 +71,7 @@ end
 local handler
 handler = function(eff, vh, effh)
   local is_the_eff = function(it)
-    return tostring(eff) == it
+    return eff.eff == it
   end
 
   return function(th)
@@ -149,6 +131,33 @@ local handlers
 handlers = function(vh, ...)
   local effeffhs = {...}
 
+  if type(vh) == "table" and #effeffhs == 0 then
+    -- handlers({vh, [eff] = f, ...})
+    local vh_ = table.remove(vh)
+
+    for k, h in pairs(vh) do
+      effeffhs[k.eff] = h
+    end
+
+    vh = vh_
+  elseif #effeffhs > 0 and #effeffhs[1] == 2 then
+    -- handlers(vh, {{eff, f}, ...})
+    local hs = {}
+
+    for i = 1, #effeffhs do
+      local effeffh = effeffhs[i]
+      hs[effeffh[1].eff] = effeffh[2]
+    end
+
+    effeffhs = hs
+  else
+    -- handlers(vh, {[eff] = f, ...})
+    assert(type(vh) == "function")
+    assert(type(effeffhs[1]) == "table" and not effeffhs[2])
+
+    effeffhs = effeffhs[1]
+  end
+
   return function(th)
     local gr = create(th)
 
@@ -156,7 +165,7 @@ handlers = function(vh, ...)
     local continue
 
     local rehandles = function(arg, k)
-      return handlers(function(...) return continue(gr, ...) end, unpack(effeffhs))(function()
+      return handlers(function(...) return continue(gr, ...) end, effeffhs)(function()
         return k(arg)
       end)
     end
@@ -167,7 +176,7 @@ handlers = function(vh, ...)
       end
 
       if r.cls == inst.cls then
-        local effh = get_effh(r.eff, effeffhs)
+        local effh = effeffhs[r.eff]
         if effh then
           return effh(function(arg)
             return continue(gr, arg)
@@ -178,7 +187,7 @@ handlers = function(vh, ...)
           end)
         end
       elseif r.cls == Resend.cls then
-        local effh = get_effh(r.eff, effeffhs)
+        local effh = effeffhs[r.eff]
         if effh then
           return effh(function(arg)
             return rehandles(arg, r.continue)
