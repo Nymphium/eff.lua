@@ -55,6 +55,15 @@ local someh = handlers(
   {Foo, function(k, v) print("catch Foo") return k(v) end},
   {Bar, function(k, v) print("catch Bar") return k(v) end}
 )
+
+-- or you can write like:
+
+local awesomeh = handlers {
+  function(v) return v end, -- value handler
+  -- this is not `[[Foo]]`, just [Foo]
+  [Foo] = function(k, v) print("catch foo") return k(v) end,
+  [Bar] = function(k, v) print("catch bar") return k(v) end,
+}
 ```
 
 ### limitation about continuation

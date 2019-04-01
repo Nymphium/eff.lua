@@ -11,20 +11,20 @@ end
 
 -- parameter-passing style
 local runHistory = function(th)
-  local h = handlers(
+  local h = handlers{
     function(v) return function(h) return v, h end end,
-    {Push, function(k, c)
+    [Push] = function(k, c)
       return function(h)
         local h_ = table_shallow_copy(h)
         table.insert(h_, c)
         return k()(h_)
       end
-    end},
-    {History, function(k)
+    end,
+    [History] = function(k)
       return function(h)
         return k(h)(h)
       end
-    end})
+    end }
 
   return h(th)({})
 end
