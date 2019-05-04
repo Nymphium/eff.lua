@@ -127,6 +127,83 @@ handler = function(eff, vh, effh)
   end
 end
 
+local shallow_handler
+shallow_handler = function(eff, vh, effh)
+  local is_the_eff = function(it)
+    return eff.eff == it
+  end
+
+  return function(th)
+    local co = create(th)
+
+    local continue
+
+    local rehandle = function(h, arg, k)
+      return handler(eff, function(args) return continue(h, args) end, effh)(function()
+        return k(arg)
+      end)
+    end
+
+    local function throw(r)
+      if not is_eff_obj(r) then
+        return r
+      end
+
+      if r.cls == inst.cls then
+        if is_the_eff(r.eff) then
+          return Resend(r, function(arg)
+            return continue(throw, arg)
+          end)
+        elseif r.cls == Resend.cls then
+          return Resend(r, function(arg)
+            return rehandle(throw, arg, r.continue)
+          end)
+        end
+      end
+    end
+
+    local handle0 = function(r, h)
+      if not is_eff_obj(r) then
+        return vh(r)
+      end
+
+      if r.cls == inst.cls then
+        if is_the_eff(r.eff) then
+          return effh(function(arg)
+            return continue(throw, arg)
+          end, unpack(r.arg))
+        else
+          return Resend(r, function(arg)
+            return continue(h, arg)
+          end)
+        end
+      elseif r.cls == Resend.cls then
+        if is_the_eff(r.eff) then
+          return effh(function(arg)
+            return rehandle(throw, arg, r.continue)
+          end, unpack(r.arg))
+        else
+          return Resend(r, function(arg)
+            return rehandle(h, arg, r.continue)
+          end)
+        end
+      end
+    end
+
+    continue = function(h, arg)
+      local st, r = resume(co, arg)
+      if not st then
+        return handle_error_message(r)
+      else
+        return h(r)
+      end
+    end
+
+    return continue(handle0, nil)
+  end
+end
+
+
 local handlers
 handlers = function(vh, ...)
   local effeffhs = {...}
@@ -218,6 +295,7 @@ return {
   inst = inst,
   perform = yield,
   handler = handler,
+  shallow_handler = shallow_handler,
   handlers = handlers
 }
 
