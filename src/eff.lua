@@ -179,11 +179,11 @@ handlers = function(vh, ...)
         local effh = effeffhs[r.eff]
         if effh then
           return effh(function(arg)
-            return continue(arg)
+            return continue(gr, arg)
           end, unpack(r.arg))
         else
           return Resend(r, function(arg)
-            return continue(arg)
+            return continue(gr, arg)
           end)
         end
       elseif r.cls == Resend.cls then
@@ -200,8 +200,8 @@ handlers = function(vh, ...)
       end
     end
 
-    continue = function(arg)
-      local st, r = resume(gr, arg)
+    continue = function(co, arg)
+      local st, r = resume(co, arg)
       if not st then
         return handle_error_message(r)
       else
@@ -209,7 +209,7 @@ handlers = function(vh, ...)
       end
     end
 
-    return continue(nil)
+    return continue(gr, nil)
   end
 end
 
