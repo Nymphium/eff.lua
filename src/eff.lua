@@ -193,7 +193,7 @@ handlers = function(vh, ...)
             return rehandles(arg, r.continue)
           end, unpack(r.arg))
         else
-          return Resend(r, function(arg)
+          return Resend(r.eff, function(arg)
             return rehandles(arg, r.continue)
           end)
         end
