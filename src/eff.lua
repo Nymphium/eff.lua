@@ -9,8 +9,7 @@ local unpack = function(t)
   end
 end
 
-local inst
-do
+local inst do
   local v = {}
   v.cls = ("Eff: %s"):format(tostring(v):match('0x[0-f]+'))
 
@@ -68,6 +67,17 @@ local function handle_error_message(r)
   end
 end
 
+local gen_continue = function(co, handle)
+  return function(arg)
+    local st, r = resume(co, arg)
+    if not st then
+      return handle_error_message(r)
+    else
+      return handle(r)
+    end
+  end
+end
+
 local handler
 handler = function(eff, vh, effh)
   local is_the_eff = function(it)
@@ -75,15 +85,17 @@ handler = function(eff, vh, effh)
   end
 
   return function(th)
-    local gr = create(th)
+    local co = create(th)
 
     local handle
     local continue
 
-    local rehandle = function(arg, k)
-      return handler(eff, function(args) return continue(gr, unpack(args)) end, effh)(function()
-        return k(arg)
-      end)
+    local rehandle = function(k)
+      return function(arg)
+        return handler(eff, function(args) return continue(unpack(args)) end, effh)(function()
+          return k(arg)
+        end)
+      end
     end
 
     handle = function(r)
@@ -94,41 +106,29 @@ handler = function(eff, vh, effh)
       if r.cls == inst.cls then
         if is_the_eff(r.eff) then
           return effh(function(arg)
-            return continue(gr, arg)
+            return continue(arg)
           end, unpack(r.arg))
         else
           return Resend(r, function(arg)
-            return continue(gr, arg)
+            return continue(arg)
           end)
         end
       elseif r.cls == Resend.cls then
         if is_the_eff(r.eff) then
-          return effh(function(arg)
-            return rehandle(arg, r.continue)
-          end, unpack(r.arg))
+          return effh(rehandle(r.continue), unpack(r.arg))
         else
-          return Resend(r, function(arg)
-            return rehandle(arg, r.continue)
-          end)
+          return Resend(r, rehandle(r.continue))
         end
       end
     end
 
-    continue = function(co, arg)
-      local st, r = resume(co, arg)
-      if not st then
-        return handle_error_message(r)
-      else
-        return handle(r)
-      end
-    end
+    continue = gen_continue(co, handle)
 
-    return continue(gr, nil)
+    return continue(nil)
   end
 end
 
-local handlers
-handlers = function(vh, ...)
+local function assemble_handler(vh, ...)
   local effeffhs = {...}
 
   if type(vh) == "table" and #effeffhs == 0 then
@@ -158,16 +158,25 @@ handlers = function(vh, ...)
     effeffhs = effeffhs[1]
   end
 
+  return vh, effeffhs
+end
+
+local handlers
+handlers = function(...)
+  local vh, effeffhs = assemble_handler(...)
+
   return function(th)
-    local gr = create(th)
+    local co = create(th)
 
     local handle
     local continue
 
-    local rehandles = function(arg, k)
-      return handlers(function(...) return continue(gr, ...) end, effeffhs)(function()
-        return k(arg)
-      end)
+    local rehandles = function(k)
+      return function(arg)
+        return handlers(function(...) return continue(...) end, effeffhs)(function()
+          return k(arg)
+        end)
+      end
     end
 
     handle = function(r)
@@ -178,41 +187,25 @@ handlers = function(vh, ...)
       if r.cls == inst.cls then
         local effh = effeffhs[r.eff]
         if effh then
-          return effh(function(arg)
-            return continue(gr, arg)
-          end, unpack(r.arg))
+          return effh(continue, unpack(r.arg))
         else
-          return Resend(r, function(arg)
-            return continue(gr, arg)
-          end)
+          return Resend(r, continue)
         end
       elseif r.cls == Resend.cls then
         local effh = effeffhs[r.eff]
         if effh then
-          return effh(function(arg)
-            return rehandles(arg, r.continue)
-          end, unpack(r.arg))
+          return effh(rehandles(r.continue), unpack(r.arg))
         else
-          return Resend(r.eff, function(arg)
-            return rehandles(arg, r.continue)
-          end)
+          return Resend(r.eff, rehandles(r.continue))
         end
       end
     end
 
-    continue = function(co, arg)
-      local st, r = resume(co, arg)
-      if not st then
-        return handle_error_message(r)
-      else
-        return handle(r)
-      end
-    end
+    continue = gen_continue(co, handle)
 
-    return continue(gr, nil)
+    return continue(nil)
   end
 end
-
 
 return {
   inst = inst,
