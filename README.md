@@ -17,7 +17,7 @@ $ luarocks --local install eff
 
 ```lua
 local Write = inst() -- instantiation
-perform(Write("Hello!")) -- invocation
+perform(Write, "Hello!") -- invocation
 ```
 
 ## effect handler
@@ -28,13 +28,13 @@ perform(Write("Hello!")) -- invocation
 ```lua
 local printh = handler(Write,
   function(v) print("printh ended", v) end,
-  function(k, arg)
+  function(arg, k)
     print(arg)
     k()
   end)
 
 printh(function()
-  local x = perform(Write("hello"))
+  local x = perform(Write, "hello")
   return x
 end)
 
@@ -50,13 +50,13 @@ The continuation `effect handler` received is *ONE-SHOT*, in other words, the co
 ```lua
 handler(Write,
   function(v) print("printh ended", v) end,
-  function(k, arg)
+  function(arg, k)
     print(arg)
     k()
     k() -- call continuation twice
   end)
 (function()
-  perform(Write("Foo"))
+  perform(Write, "Foo")
 end)
 
 --[[prints

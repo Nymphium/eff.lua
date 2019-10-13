@@ -1,67 +1,12 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/async_await.ml
 
-local eff = require('eff')
+local eff = require('src/eff')
 local inst, perform, handler = eff.inst, eff.perform, eff.handler
-local inspect = require('inspect')
 
-local imut
-do
-  table.move = table.move
-  or function(src, from, to, on, dst)
-    for  i = from, to do
-      dst[i + on - 1] = src[i]
-    end
-
-    return dst
-  end
-
-  local cp = function(t)
-    return table.move(t, 1, #t, 1, {})
-  end
-
-  local cons = function(e, t)
-    local ret = cp(t)
-    table.insert(ret, e)
-    return ret
-  end
-
-  local rev = function(t)
-    local ret = {}
-
-    for i = #t, 1, -1 do
-      table.insert(ret, t[i])
-    end
-
-    return ret
-  end
-
-  imut = {
-    cp = cp,
-    cons = cons,
-    rev = rev
-  }
-end
-
-local ref
-do
-  local newref = function()
-    return setmetatable({
-      content = nil,
-      get = function(self)
-        return self.content
-      end
-    }, {
-      __call = function(self, v)
-        self.content = v
-        return self
-      end,
-      __bnot = function(self)
-        return self.content
-      end})
-  end
-
-  ref = function(v) return newref()(v) end
-end
+local imut = require('spec/utils/imut')
+local ref = require('spec/utils/ref')
+local randoms = require('spec/utils/SEED')
+randoms.init()
 
 local Waiting = function(conts)
   return { conts, cls =  "waiting" }
@@ -71,15 +16,18 @@ local Done = function(a)
   return { a, cls = "done" }
 end
 
-local AEff = inst()
+local Eff = inst()
+
 local async = function(f)
-  return perform(AEff{ f, cls = "async" })
+  return perform(Eff, { type = "async", f })
 end
+
 local yield = function()
-  return perform(AEff{ cls = "yield" })
+  return perform(Eff, { type = "yield" })
 end
+
 local await = function(p)
-  return perform(AEff{ p, cls = "await" })
+  return perform(Eff, { type = "await", p })
 end
 
 -- queue
@@ -91,14 +39,13 @@ end
 local dequeue = function()
   local f = table.remove(q, 1)
   if f then
-    local m = f()
-    return m
+    return f()
   end
 end
 
 local run = function(main)
   local function fork(pr, main)
-    return handler(AEff,
+    return handler(Eff,
       function(v)
         local pp = pr:get()
         local l
@@ -116,17 +63,16 @@ local run = function(main)
         pr(Done(v))
         return dequeue()
       end,
-      function(k, c)
-        if c.cls == "async" then
-          local f = c[1]
+      function(v, k)
+        if v.type == "async" then
           local pr_ = ref(Waiting{})
           enqueue(function() return k(pr_) end)
-          return fork(pr_, f)
-        elseif c.cls == "yield" then
+          return fork(pr_, v[1])
+        elseif v.type == "yield" then
           enqueue(function() return k() end)
           return dequeue()
-        elseif c.cls == "await" then
-          local p = c[1]
+        elseif v.type == "await" then
+          local p = v[1]
           local pp = p:get()
 
           if pp.cls == "done" then
@@ -142,27 +88,58 @@ local run = function(main)
   return fork(ref(Waiting{}), main)
 end
 
-local main = function()
-  local task = function(name)
-    return function()
-      print(("Starting %s"):format(name))
-      local v = math.random(100)
-      print(("Yielding %s"):format(name))
-      yield()
-      print(("Ending %s with %d"):format(name, v))
-      return v
+insulate("async await test", function()
+  randomize(false)
+
+  spy.on(_G, "print")
+
+  local main = function()
+    local task = function(name)
+      return function()
+        print(("Starting %s"):format(name))
+        local v = math.random(100)
+        print(("Yielding %s"):format(name))
+        yield()
+        print(("Ending %s with %d"):format(name, v))
+        return v
+      end
     end
+
+    local pa = async(task "a")
+
+    local pb = async(task "b")
+    local pc = async(function()
+      return await(pa) + await(pb)
+    end)
+
+    print(("sum is %d"):format(await(pc)))
+    assert(await(pa) + await(pb) == await(pc))
   end
 
-  local pa = async(task "a")
-  local pb = async(task "b")
-  local pc = async(function()
-    return await(pa) + await(pb)
+  describe("run", function()
+    run(main)
+
+    it("check first resuming a", function()
+      assert.spy(print).was_called_with("Starting a")
+      assert.spy(print).was_called_with("Yielding a")
+    end)
+
+    it("check first resuming b", function()
+      assert.spy(print).was_called_with("Starting b")
+      assert.spy(print).was_called_with("Yielding b")
+    end)
+
+    it("check task return value", function()
+      randoms.init()
+
+      local v1 = math.random(100)
+      local v2 = math.random(100)
+
+      assert.spy(print).was_called_with(("Ending %s with %d"):format("a", v1))
+      assert.spy(print).was_called_with(("Ending %s with %d"):format("b", v2))
+      assert.spy(print).was_called_with(("sum is %d"):format(v1 + v2))
+      assert.spy(print).was_called(7)
+    end)
   end)
-
-  print(("sum is %d"):format(await(pc)))
-  assert(await(pa) + await(pb) == await(pc))
-end
-
-run(main)
+end)
 

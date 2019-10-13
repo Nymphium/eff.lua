@@ -1,6 +1,6 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/state2.ml
 
-local eff = require('eff')
+local eff = require('src/eff')
 local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
 local imut
@@ -44,19 +44,19 @@ end
 local State = function()
   local SEff = inst()
   local get = function()
-    return perform(SEff{ cls = "Get" })
+    return perform(SEff, { cls = "Get" })
   end
   local put = function(v)
-    return perform(SEff{ v, cls = "Put" })
+    return perform(SEff, { v, cls = "Put" })
   end
   local history = function()
-    return perform(SEff{ cls = "History" })
+    return perform(SEff, { cls = "History" })
   end
 
   local run = function(f, init)
     local comp = handler(SEff,
     function() return function() end end,
-    function(k, c)
+    function(c, k)
       return function(s, h)
         if c.cls == "Get" then
           return k(s)(s, h)
