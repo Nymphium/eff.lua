@@ -95,6 +95,7 @@ local foo = function()
   assert(21 == is.get())
   ss.put("world")
   is.get()
+  print("OK!")
 
   local t = {42, 21}
   local hs = is.history()
