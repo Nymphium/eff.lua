@@ -1,6 +1,6 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/generator.ml
 local eff = require('src/eff')
-local inst, perform, handler = eff.inst, eff.perform, eff.handler
+local inst, perform, handle, Return, run = eff.inst, eff.perform, eff.handle, eff.Return, eff.run
 
 --[[
 iter : ('a table, 'a -> 'b) ->  ()
@@ -12,20 +12,22 @@ local generate = function(iter, c)
   step.f = function()
     iter(c, function(v) return perform(Yield, v) end)
     step.f = function()
-      return
+      return Return()
     end
+
+    return Return()
   end
 
   return function()
-    return handler(Yield,
-      function(v) return v end,
-      function(v, k)
+    return handle({
+      val = function(v) return v end,
+      [Yield] = function(v, k)
         step.f = k
-        return v
+        return Return(v)
       end
-      )(function()
-        return step.f()
-      end)
+    }, function()
+      return step.f()
+    end)
   end
 end
 
@@ -37,11 +39,11 @@ end
 
 local gen_list = function(c) return generate(table_iter, c) end
 local gl = gen_list {3, 5, 7}
-assert(gl() == 3)
-assert(gl() == 5)
-assert(gl() == 7)
-assert(gl() == nil)
-assert(gl() == nil)
+assert(run(gl()) == 3)
+assert(run(gl()) == 5)
+assert(run(gl()) == 7)
+assert(run(gl()) == nil)
+assert(run(gl()) == nil)
 
 local function nats(v, f)
   return function()
@@ -63,10 +65,10 @@ end
 
 local gen_nats = inf(generate(function(_, f) return nats(0, f)() end, nil))
 
-assert(gen_nats() == 0)
-assert(gen_nats() == 1)
-assert(gen_nats() == 2)
-assert(gen_nats() == 3)
+assert(run(gen_nats()) == 0)
+assert(run(gen_nats()) == 1)
+assert(run(gen_nats()) == 2)
+assert(run(gen_nats()) == 3)
 
 
 local function filter(g, p)
@@ -90,48 +92,46 @@ do
     return nats(0, f)()
   end))
 
-  gen_even = filter(nat_stream, function(n) return n % 2 == 0 end)
+  gen_even = filter(nat_stream, function(n) return run(n) % 2 == 0 end)
 end
 
-assert(gen_even() == 0)
-assert(gen_even() == 2)
-assert(gen_even() == 4)
-assert(gen_even() == 6)
+assert(run(gen_even()) == 0)
+assert(run(gen_even()) == 2)
+assert(run(gen_even()) == 4)
+assert(run(gen_even()) == 6)
 
-local gen_odd
-do
+local gen_odd do
   local nat_stream = inf(generate(function(_, f) return nats(0, f)() end))
 
-  gen_odd = filter(nat_stream, function(n) return n % 2 == 1 end)
+  gen_odd = filter(nat_stream, function(n) return run(n) % 2 == 1 end)
 end
 
 
-assert(gen_odd() == 1)
-assert(gen_odd() == 3)
-assert(gen_odd() == 5)
-assert(gen_odd() == 7)
+assert(run(gen_odd()) == 1)
+assert(run(gen_odd()) == 3)
+assert(run(gen_odd()) == 5)
+assert(run(gen_odd()) == 7)
 
-local gen_primes
-do
+local gen_primes do
   local s = inf(generate(function(_, f) return nats(2, f)() end))
   local rs = {s = s}
 
   gen_primes = function()
     local prime = rs.s()
-    rs.s = filter(rs.s, function(n) return n % prime ~= 0 end)
+    rs.s = filter(rs.s, function(n) return run(n) % run(prime) ~= 0 end)
     return prime
   end
 end
 
-assert(gen_primes() == 2)
-assert(gen_primes() == 3)
-assert(gen_primes() == 5)
-assert(gen_primes() == 7)
-assert(gen_primes() == 11)
-assert(gen_primes() == 13)
-assert(gen_primes() == 17)
-assert(gen_primes() == 19)
-assert(gen_primes() == 23)
-assert(gen_primes() == 29)
-assert(gen_primes() == 31)
+assert(run(gen_primes()) == 2)
+assert(run(gen_primes()) == 3)
+assert(run(gen_primes()) == 5)
+assert(run(gen_primes()) == 7)
+assert(run(gen_primes()) == 11)
+assert(run(gen_primes()) == 13)
+assert(run(gen_primes()) == 17)
+assert(run(gen_primes()) == 19)
+assert(run(gen_primes()) == 23)
+assert(run(gen_primes()) == 29)
+assert(run(gen_primes()) == 31)
 

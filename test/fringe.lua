@@ -1,7 +1,7 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/fringe.ml
 
 local eff = require('src/eff')
-local inst, perform, handler = eff.inst, eff.perform, eff.handler
+local inst, perform, handle, Return, run = eff.inst, eff.perform, eff.handle, eff.Return, eff.run
 
 local Yield = inst()
 
@@ -9,21 +9,20 @@ local generate = function(iter, c)
   local step = { f = nil }
   step.f = function()
     iter(c, function(v) return perform(Yield, v) end)
-    step.f = function()
-      return
-    end
+    step.f = function() end
   end
 
   return function()
-    return handler(Yield,
-      function(v) return v end,
-      function(v, k)
+    return handle({
+      val = function(v) return v end,
+      [Yield] = function(v, k)
         step.f = k
-        return v
+        return Return(v)
       end
-      )(function()
-        return step.f()
-      end)
+    }, function()
+      step.f()
+      return Return()
+    end)
   end
 end
 
@@ -49,7 +48,7 @@ local same_fringe = function(t1, t2)
   local g1 = gen_tree(t1)
   local g2 = gen_tree(t2)
   local function loop()
-    local r1, r2 = g1(), g2()
+    local r1, r2 = run(g1()), run(g2())
     if r1 and r2 and r1 == r2 then
       return loop()
     else

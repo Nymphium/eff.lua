@@ -1,10 +1,11 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/state2.ml
 
 local eff = require('src/eff')
-local inst, perform, handler = eff.inst, eff.perform, eff.handler
+local inst, perform, handle, Return, run = eff.inst, eff.perform, eff.handle, eff.Return, eff.run
+local bind = eff.bind
+local Call = eff.Call
 
-local imut
-do
+local imut do
   table.move = table.move
   or function(src, from, to, on, dst)
     for  i = from, to do
@@ -42,34 +43,57 @@ do
 end
 
 local State = function()
-  local SEff = inst()
+  local Get = inst()
   local get = function()
-    return perform(SEff, { cls = "Get" })
+    return perform(Get)
   end
+  local Put = inst()
   local put = function(v)
-    return perform(SEff, { v, cls = "Put" })
+    return perform(Put, v)
   end
+  local History = inst()
   local history = function()
-    return perform(SEff, { cls = "History" })
+    return perform(History)
   end
 
   local run = function(f, init)
-    local comp = handler(SEff,
-    function() return function() end end,
-    function(c, k)
-      return function(s, h)
-        if c.cls == "Get" then
-          return k(s)(s, h)
-        elseif c.cls == "Put" then
-          local s_ = c[1]
-          return k()(s_, imut.cons(s_, h))
-        elseif c.cls == "History" then
-          return k(imut.rev(h))(s, imut.cp(h))
-        end
+    local h = setmetatable({
+      val = function(_) return Return(Return) end,
+      [Get] = function(_, k)
+        return Return(function(s, h)
+          return bind(k(s), function(y)
+            return y(s, h)
+          end)
+        end)
+      end,
+      [Put] = function(c, k)
+        print(c)
+        return Return(function(s, h)
+          return bind(k(), function(y)
+            return y(c, imut.cons(c, h))
+          end)
+        end)
+      end,
+      [History] = function(c, k)
+        return Return(function(s, h)
+          return bind(k(imut.rev(h)), function(y)
+            return y(s, imut.cp(h))
+          end)
+        end)
       end
-    end)
+    }, {__index = function(_self, op) return function(x, k)
+      return Return(function(s, h)
+        return bind(Call(op, x, k), function(y)
+          return y(s, h)
+        end)
+      end)
+    end end})
 
-    return comp(f)(init, {})
+    return bind(handle(h, f), function(k)
+      return bind(k(init, {}), function(_)
+        return Return()
+      end)
+    end)
   end
 
   return {
@@ -102,11 +126,13 @@ local foo = function()
   for i = 1, #hs do
     assert(t[i], hs[i])
   end
+
+  print("ok")
+
+  return Return(0)
 end
 
-is.run(function() return ss.run(foo, "") end, 0)
-
--- ss.run(function()
-  -- is.run(foo, 0)
--- end, "")
+is.run(function()
+  return ss.run(foo, "")
+end, 0)
 
