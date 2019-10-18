@@ -1,62 +1,87 @@
 local create = coroutine.create
+local resume = coroutine.resume
 local yield = coroutine.yield
+local unpack0 = table.unpack or unpack
 
-local resume = function(co, a)
-  local st, r = coroutine.resume(co, a)
-
-  if not st then
-    return error(r)
-  else
-    return r
+local unpack = function(t)
+  if t and #t > 0 then
+    return unpack0(t)
   end
 end
 
-local inst = function()
-  return {}
+local inst do
+  local cls = ("Eff: %s"):format(tostring(v):match('0x[0-f]+'))
+
+  inst = setmetatable({ cls = cls }, {
+    __call = function(self)
+      local eff = ("instance: %s"):format(tostring{}:match('0x[0-f]+'))
+      return { eff = eff, cls = self.cls}
+    end
+  })
 end
 
--- Call : ('arg, 'res) operation * 'arg * ('res -> 'a computation) -> 'a computation
-local callT = "call"
-local call = function(op, x, k)
-  return { type = callT, op = op, x = x, k = k }
+local perform = function(eff, arg)
+  return yield { cls = eff.cls, eff = eff.eff, arg = arg }
 end
 
-local throwT = {
-  perform = false,
-  resend = true
-}
-
-local perform = function(op, arg)
-  local current = coroutine.running()
-
-  local k = function(a)
-    return resume(current, a)
+local show_error = function(eff)
+  return function()
+    return ("uncaught effect `%s'"):format(eff)
   end
-
-  return yield(call(op, {arg, type = throwT.perform}, k) )
 end
 
+local Resend do
+  local cls = ("Resend: %s"):format(tostring(v):match('0x[0-f]+'))
 
-local resend = function(op, arg, k)
-  return yield(call(op, {arg, type = throwT.resend}, k) )
+  Resend = setmetatable({ cls = cls }, {
+    __call = function(self, effobj, continue)
+      return yield { eff = effobj.eff, arg = effobj.arg, continue = continue, cls = self.cls }
+    end
+  })
 end
 
 local is_eff_obj = function(obj)
-  return type(obj) == "table" and (obj.type == callT)
+  return type(obj) == "table" and (obj.cls == inst.cls or obj.cls == Resend.cls)
+end
+
+local function handle_error_message(r)
+  if type(r) == "string" and
+  (r:match("attempt to yield from outside a coroutine")
+   or r:match("cannot resume dead coroutine"))
+  then
+    return error("continuation cannot be performed twice")
+  else
+    return error(r)
+  end
+end
+
+local gen_continue = function(co, handle)
+  return function(arg)
+    local st, r = resume(co, arg)
+    if not st then
+      return handle_error_message(r)
+    else
+      return handle(r)
+    end
+  end
 end
 
 local handler
-handler = function(op, vh, effh)
+handler = function(eff, vh, effh)
+  local eff_type = eff.eff
+
   return function(th)
     local co = create(th)
 
     local handle
-    local handler_ do
-      local vh_ = function(arg)
-        return handle(resume(co, arg))
-      end
+    local continue
 
-      handler_ = handler(op, vh_, effh)
+    local rehandle = function(k)
+      return function(arg)
+        return handler(eff, continue, effh)(function()
+          return k(arg)
+        end)
+      end
     end
 
     handle = function(r)
@@ -64,32 +89,33 @@ handler = function(op, vh, effh)
         return vh(r)
       end
 
-      if r.type == callT then
-        local resended = r.x.type
-        local k
-
-        if resended then
-          k = function(arg)
-            return handler_(function()
-              return r.k(arg)
-            end)
-          end
+      if r.cls == inst.cls then
+        if r.eff == eff_type then
+          return effh(r.arg, continue)
         else
-          k = function(arg)
-            return handle(r.k(arg))
-          end
+          return Resend(r, function(arg)
+            return continue(arg)
+          end)
         end
-
-        local arg = r.x[1]
-        if r.op == op then
-          return effh(arg, k)
+      elseif r.cls == Resend.cls then
+        if r.eff == eff_type then
+          return effh(r.arg, rehandle(r.continue))
         else
-          return resend(r.op, arg, k)
+          return Resend(r, rehandle(r.continue))
         end
       end
     end
 
-    return handle(resume(co, nil))
+    continue = function(arg)
+      local st, r = resume(co, arg)
+      if not st then
+        return handle_error_message(r)
+      else
+        return handle(r)
+      end
+    end
+
+    return continue(nil)
   end
 end
 
