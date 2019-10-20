@@ -70,18 +70,20 @@ local Done = function(a)
   return { a, cls = "done" }
 end
 
-local Eff = inst()
 
+local Async = inst()
 local async = function(f)
-  return perform(Eff, { type = "async", f })
+  return perform(Async, f)
 end
 
+local Yield = inst()
 local yield = function()
-  return perform(Eff, { type = "yield" })
+  return perform(Yield)
 end
 
+local Await = inst()
 local await = function(p)
-  return perform(Eff, { type = "await", p })
+  return perform(Await, p)
 end
 
 -- queue
@@ -99,44 +101,44 @@ end
 
 local run = function(main)
   local function fork(pr, main)
-    return handler(Eff,
-                   function(v)
-                     local pp = pr:get()
-                     local l
+    return handler{
+      val = function(v)
+        local pp = pr:get()
+        local l
 
-                     if pp.cls == "waiting" then
-                       l = pp[1]
-                     else
-                       error("impossible")
-                     end
+        if pp.cls == "waiting" then
+          l = pp[1]
+        else
+          error("impossible")
+        end
 
-                     for _, k in ipairs(l) do
-                       enqueue(function() return k(v) end)
-                     end
+        for _, k in ipairs(l) do
+          enqueue(function() return k(v) end)
+        end
 
-                     pr(Done(v))
-                     return dequeue()
-                   end,
-                   function(v, k)
-                     if v.type == "async" then
-                       local pr_ = ref(Waiting{})
-                       enqueue(function() return k(pr_) end)
-                       return fork(pr_, v[1])
-                     elseif v.type == "yield" then
-                       enqueue(function() return k() end)
-                       return dequeue()
-                     elseif v.type == "await" then
-                       local p = v[1]
-                       local pp = p:get()
+        pr(Done(v))
+        return dequeue()
+      end,
+      [Async] =  function(f, k)
+        local pr_ = ref(Waiting{})
+        enqueue(function() return k(pr_) end)
+        return fork(pr_, f)
+      end,
+      [Yield] = function(_, k)
+        enqueue(function() return k() end)
+        return dequeue()
+      end,
+      [Await] = function(p, k)
+        local pp = p:get()
 
-                       if pp.cls == "done" then
-                         return k(pp[1])
-                       elseif pp.cls == "waiting" then
-                         p(Waiting(imut.cons(k, pp[1])))
-                         return dequeue()
-                       end
-                     end
-                   end)(main)
+        if pp.cls == "done" then
+          return k(pp[1])
+        elseif pp.cls == "waiting" then
+          p(Waiting(imut.cons(k, pp[1])))
+          return dequeue()
+        end
+      end
+    }(main)
   end
 
   return fork(ref(Waiting{}), main)
@@ -155,7 +157,6 @@ local main = function()
   end
 
   local pa = async(task "a")
-
   local pb = async(task "b")
   local pc = async(function()
     return await(pa) + await(pb)

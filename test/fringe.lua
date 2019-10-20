@@ -15,14 +15,14 @@ local generate = function(iter, c)
   end
 
   return function()
-    return handler(Yield,
-      function(v) return v end,
-      function(v, k)
+    return handler({
+      val = function(v) return v end,
+      [Yield] = function(v, k)
         step.f = k
         return v
       end
-      )(function()
-        return step.f()
+    })(function()
+      return step.f()
       end)
   end
 end

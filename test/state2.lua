@@ -42,32 +42,38 @@ do
 end
 
 local State = function()
-  local SEff = inst()
+  local Get = inst()
   local get = function()
-    return perform(SEff, { cls = "Get" })
+    return perform(Get)
   end
+  local Put = inst()
   local put = function(v)
-    return perform(SEff, { v, cls = "Put" })
+    return perform(Put, v)
   end
+  local History = inst()
   local history = function()
-    return perform(SEff, { cls = "History" })
+    return perform(History)
   end
 
   local run = function(f, init)
-    local comp = handler(SEff,
-    function() return function() end end,
-    function(c, k)
-      return function(s, h)
-        if c.cls == "Get" then
+    local comp = handler{
+      val = function() return function() end end,
+      [Get] = function(_, k)
+        return function(s, h)
           return k(s)(s, h)
-        elseif c.cls == "Put" then
-          local s_ = c[1]
-          return k()(s_, imut.cons(s_, h))
-        elseif c.cls == "History" then
-          return k(imut.rev(h))(s, imut.cp(h))
         end
+      end,
+      [Put] = function(s_, k)
+        return function(_, h)
+          return k()(s_, imut.cons(s_, h))
+        end
+      end,
+      [History] = function(_, k)
+        return function(s, h)
+            return k(imut.rev(h))(s, imut.cp(h))
+          end
       end
-    end)
+    }
 
     return comp(f)(init, {})
   end
