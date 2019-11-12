@@ -39,13 +39,13 @@ local function handler(h)
 
     local rehandle = function(k)
       return function(arg)
-        local newh = {
-          val = continue,
-        }
+        local newh = { }
 
         for op, effh in pairs(h) do
           newh[op] = effh
         end
+
+        newh.val = continue
 
         return handler(newh)(function()
           return k(arg)
