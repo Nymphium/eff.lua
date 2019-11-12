@@ -11,7 +11,7 @@ $ luarocks --local install eff
 ```
 
 # usage
-`eff` provides four objects, `inst`, `perform`, `handler` and `handlers`.
+`eff` provides four objects, `inst`, `perform`, and `handler`.
 
 ## effect instantiation and invocation
 `inst` generates an effect instance.
@@ -23,18 +23,20 @@ perform(Write("Hello!")) -- invocation
 ```
 
 ## effect handler
-`handler(eff, value-handler, effect-handler)`
+`handler(h)`
 
-`handler` requires the handling effect `eff`, `value-handler` and `effect-handler`, and returns a _handling function_.
-"Handling an expression with a handler" is translated into an application passing a thunk, containing the expression, to the _handling function_.
+`handler` requires a table, which should have _handling functions_ associated with its effects.
+"Handling an expression with a handler" is translated into an application passing a thunk, containing the expression, to the _handling functions_.
 
 ```lua
-local printh = handler(Write,
-  function(v) print("printh ended", v) end,
-  function(k, arg)
+local printh = handler {
+  val = function(v) print("printh ended", v) end,
+  -- this is not `[[Write]]`, just [Write]. Not a macro, but a standard table syntax.
+  [Write] = function(k, arg)
     print(arg)
     k()
-  end)
+  end
+}
 
 printh(function()
   local x = perform(Write("hello"))
@@ -47,20 +49,10 @@ printh ended    nil
 ]]
 ```
 
-`handlers` can handle multiple effects.
-Pass `{eff, effect-handler}` tuples to the function
-```lua
-local someh = handlers(
-  function(v) return v end, -- value handler
-  {Foo, function(k, v) print("catch Foo") return k(v) end},
-  {Bar, function(k, v) print("catch Bar") return k(v) end}
-)
-```
-or you can write such as
+`handler` can handle multiple effects.
 ```lua
 local awesomeh = handlers {
-  function(v) return v end, -- value handler
-  -- this is not `[[Foo]]`, just [Foo]. Not a macro, but a standard table syntax.
+  val = function(v) return v end,
   [Foo] = function(k, v) print("catch foo") return k(v) end,
   [Bar] = function(k, v) print("catch bar") return k(v) end,
 }
@@ -70,14 +62,14 @@ local awesomeh = handlers {
 The continuation `effect handler` received is *ONE-SHOT*, in other words, the continuatoin *cannot* run more than twice.
 
 ```lua
-handler(Write,
-  function(v) print("printh ended", v) end,
-  function(k, arg)
+handler {
+  val = function(v) print("printh ended", v) end,
+  [Write] = function(k, arg)
     print(arg)
     k()
     k() -- call continuation twice
-  end)
-(function()
+  end
+}(function()
   perform(Write("Foo"))
 end)
 

@@ -1,7 +1,7 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/async_await.ml
 
 local eff = require('src/eff')
-local inst, perform, handlers = eff.inst, eff.perform, eff.handlers
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
 local imut = require('spec/utils/imut')
 local ref = require('spec/utils/ref')
@@ -46,8 +46,8 @@ end
 
 local run = function(main)
   local function fork(pr, main)
-    return handlers{
-      function(v)
+    return handler{
+      val = function(v)
         local pp = pr:get()
         local l
 

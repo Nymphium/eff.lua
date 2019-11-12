@@ -1,7 +1,7 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/state2.ml
 
 local eff = require('src/eff')
-local inst, perform, handlers = eff.inst, eff.perform, eff.handlers
+local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
 local imut = require('spec/utils/imut')
 
@@ -21,24 +21,24 @@ local State = function()
   end
 
   local run = function(f, init)
-    local comp = handlers(
-      function() return function() end end,
-        {Get, function(k)
-          return function(s, h)
-            return k(s)(s, h)
-          end
-        end},
-        {Put, function(k, v)
-          return function(_, h)
-            return k()(v, imut.cons(v, h))
-          end
-        end},
-        {History, function(k)
-          return function(s, h)
-            return k(imut.rev(h))(s, imut.cp(h))
-          end
-        end}
-    )(f)
+    local comp = handler {
+      val = function() return function() end end,
+      [Get] = function(k)
+        return function(s, h)
+          return k(s)(s, h)
+        end
+      end,
+      [Put] = function(k, v)
+        return function(_, h)
+          return k()(v, imut.cons(v, h))
+        end
+      end,
+      [History] = function(k)
+        return function(s, h)
+          return k(imut.rev(h))(s, imut.cp(h))
+        end
+      end
+    }(f)
 
     return comp(init, {})
   end
