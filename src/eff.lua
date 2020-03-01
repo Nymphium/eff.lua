@@ -23,12 +23,17 @@ local resume = function(co, ...)
 end
 
 local inst = function()
-  return {} -- something unique
+  local __call = function(eff, ...)
+    return {eff = eff, arg = {...}}
+  end
+
+  return setmetatable({}, {__call = __call})
 end
 
 local performT = "perform"
-local perform = function(eff, ...)
-  return yield { type = performT, eff = eff, arg = {...} }
+local perform = function(e)
+  local eff, arg = e.eff, e.arg
+  return yield { type = performT, eff = eff, arg = arg }
 end
 
 local resendT = "resend"

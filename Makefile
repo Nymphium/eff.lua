@@ -16,7 +16,7 @@ all: test
 dependencies:
 	#) -- $@ --
 	$(foreach package, $(DEPENDENCIES), \
-		$(LUAROCKS) install --local $(package);)
+		[ "$$(luarocks list $(package) --porcelain)" ] || $(LUAROCKS) install --local $(package);)
 
 luacheck: $(SRC_DIR) dependencies
 	#) -- $@ --

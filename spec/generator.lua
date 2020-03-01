@@ -10,7 +10,7 @@ local Yield = inst()
 local generate = function(iter, c)
   local step = { f = nil }
   step.f = function()
-    iter(c, function(v) return perform(Yield, v) end)
+    iter(c, function(v) return perform(Yield(v)) end)
     step.f = function()
       return
     end
@@ -19,7 +19,7 @@ local generate = function(iter, c)
   return function()
     return handler({
       val = function(v) return v end,
-      [Yield] = function(v, k)
+      [Yield] = function(k, v)
         step.f = k
         return v
       end
