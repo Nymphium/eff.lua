@@ -1,8 +1,8 @@
 package = "eff"
-version = "4.1-2"
+version = "5.0-0"
 source = {
    url = "git://github.com/Nymphium/eff.lua",
-   tag = "v4.1"
+   tag = "v5.0"
 }
 description = {
    summary = "ONE-SHOT algebraic effects for Lua!",
