@@ -19,7 +19,7 @@ coroutine.resume = function(co, ...)
       co(k)
       return ...
     end
-  })(function() return (~co)(table.unpack(args)) end)
+  })(function() return co.content(table.unpack(args)) end)
 end
 
 coroutine.create = function(th)
