@@ -1,5 +1,4 @@
 -- https://github.com/ocamllabs/ocaml-effects-tutorial/blob/master/sources/solved/generator.ml
-
 local eff = require('src/eff')
 local inst, perform, handler = eff.inst, eff.perform, eff.handler
 
@@ -18,14 +17,14 @@ local generate = function(iter, c)
   end
 
   return function()
-    return handler(Yield,
-      function(v) return v end,
-      function(k, v)
+    return handler({
+      val = function(v) return v end,
+      [Yield] = function(k, v)
         step.f = k
         return v
       end
-      )(function()
-        return step.f()
+    })(function()
+      return step.f()
       end)
   end
 end
