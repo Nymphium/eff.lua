@@ -4,8 +4,8 @@ local unpack = table.unpack or unpack
 
 local handle_error_message = function(r)
   if type(r) == "string" and
-  (r:match("attempt to yield from outside a coroutine")
-   or r:match("cannot resume dead coroutine"))
+      (r:match("attempt to yield from outside a coroutine")
+        or r:match("cannot resume dead coroutine"))
   then
     return error("continuation cannot be performed twice")
   else
@@ -24,10 +24,10 @@ end
 
 local inst = function()
   local __call = function(eff, ...)
-    return {eff = eff, arg = {...}}
+    return { eff = eff, arg = { ... } }
   end
 
-  return setmetatable({}, {__call = __call})
+  return setmetatable({}, { __call = __call })
 end
 
 local performT = "perform"
@@ -56,8 +56,8 @@ local function handler(h)
 
     local rehandle = function(k)
       return function(...)
-        local arg = {...}
-        local newh = { }
+        local arg = { ... }
+        local newh = {}
 
         for op, effh in pairs(h) do
           newh[op] = effh
@@ -72,17 +72,18 @@ local function handler(h)
     end
 
     handle = function(r)
-      if not is_eff_obj(r) then return h.val(r)
+      if not is_eff_obj(r) then
+        return h.val(r)
       else
         local effh = h[r.eff]
 
-        if     r.type == performT and effh then
+        if r.type == performT and effh then
           return effh(continue, unpack(r.arg))
-        elseif r.type == performT          then
+        elseif r.type == performT then
           return resend(r.eff, r.arg, continue)
-        elseif r.type == resendT  and effh then
+        elseif r.type == resendT and effh then
           return effh(rehandle(r.continue), unpack(r.arg))
-        elseif r.type == resendT           then
+        elseif r.type == resendT then
           return resend(r.eff, r.arg, rehandle(r.continue))
         else
           return error("unreachable")
@@ -105,7 +106,7 @@ local function shallow_handler(h)
 
     local rehandle = function(k)
       return function(...)
-        local arg = {...}
+        local arg = { ... }
         local newh = {
           val = continue,
         }
@@ -133,17 +134,18 @@ local function shallow_handler(h)
     end
 
     handle = function(r)
-      if not is_eff_obj(r) then return h.val(r)
+      if not is_eff_obj(r) then
+        return h.val(r)
       else
         local effh = h[r.eff]
 
-        if     r.type == performT and effh then
+        if r.type == performT and effh then
           return effh(continue_(co), unpack(r.arg))
-        elseif r.type == performT          then
+        elseif r.type == performT then
           return resend(r.eff, r.arg, continue)
-        elseif r.type == resendT  and effh then
+        elseif r.type == resendT and effh then
           return effh(continue_(create(r.continue)), unpack(r.arg))
-        elseif r.type == resendT           then
+        elseif r.type == resendT then
           return resend(r.eff, r.arg, rehandle(r.continue))
         else
           return error("unreachable")
@@ -161,4 +163,3 @@ return {
   handler = handler,
   shallow_handler = shallow_handler,
 }
-
