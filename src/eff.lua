@@ -77,14 +77,26 @@ local function handler(h)
       else
         local effh = h[r.eff]
 
+        local genk
+        local called = false
+        genk = function(k)
+          return function(...)
+            called = not called
+            if called then
+              return error("continuation cannot be performed twice")
+            end
+            return k(...)
+          end
+        end
+
         if r.type == performT and effh then
-          return effh(continue, unpack(r.arg))
+          return effh(genk(continue), unpack(r.arg))
         elseif r.type == performT then
-          return resend(r.eff, r.arg, continue)
+          return resend(r.eff, r.arg, genk(continue))
         elseif r.type == resendT and effh then
-          return effh(rehandle(r.continue), unpack(r.arg))
+          return effh(genk(rehandle(r.continue)), unpack(r.arg))
         elseif r.type == resendT then
-          return resend(r.eff, r.arg, rehandle(r.continue))
+          return resend(r.eff, r.arg, genk(rehandle(r.continue)))
         else
           return error("unreachable")
         end
@@ -125,7 +137,7 @@ local function shallow_handler(h)
       return function(...)
         local r = resume(co_, ...)
 
-        if not is_eff_obj(r) then
+        if not is_eff_obj(r) or not r then
           return r
         else
           return resend(r.eff, r.arg, function(...) return resume(co, ...) end)
@@ -139,14 +151,27 @@ local function shallow_handler(h)
       else
         local effh = h[r.eff]
 
+        local genk
+        local called = false
+        genk = function(k)
+          return function(...)
+            called = not called
+            if called then
+              return error("continuation cannot be performed twice")
+            end
+            return k(...)
+          end
+        end
+
+
         if r.type == performT and effh then
-          return effh(continue_(co), unpack(r.arg))
+          return effh(genk(continue_(co)), unpack(r.arg))
         elseif r.type == performT then
-          return resend(r.eff, r.arg, continue)
+          return resend(r.eff, r.arg, genk(continue))
         elseif r.type == resendT and effh then
-          return effh(continue_(create(r.continue)), unpack(r.arg))
+          return effh(genk(continue_(create(r.continue))), unpack(r.arg))
         elseif r.type == resendT then
-          return resend(r.eff, r.arg, rehandle(r.continue))
+          return resend(r.eff, r.arg, genk(rehandle(r.continue)))
         else
           return error("unreachable")
         end
